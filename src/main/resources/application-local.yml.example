@@ -15,8 +15,21 @@ jwt:
 
 oauth2:
   kakao:
-    client-id: your-kakao-client-id
+    client-id: your-kakao-rest-api-key
+    client-secret: your-kakao-client-secret   # 카카오 개발자 콘솔에서 "Client Secret 사용"을 켠 경우만 필요
     redirect-uri: http://localhost:3000/oauth/callback/kakao
+  naver:
+    client-id: your-naver-client-id
+    client-secret: your-naver-client-secret
+    redirect-uri: http://localhost:3000/oauth/callback/naver
+  google:
+    client-id: your-google-client-id
+    client-secret: your-google-client-secret
+    redirect-uri: http://localhost:3000/oauth/callback/google
+  facebook:
+    client-id: your-facebook-app-id
+    client-secret: your-facebook-app-secret
+    redirect-uri: http://localhost:3000/oauth/callback/facebook
 
 aladin:
   api-key: your-aladin-api-key

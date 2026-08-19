@@ -22,18 +22,35 @@
 ## 개발 시 참고
 - 이 프로젝트의 컨벤션/우선순위는 `CLAUDE.md` 참고 (Claude Code 사용 시에도 이 문서를 자동으로 읽습니다)
 - 스키마 변경은 반드시 Flyway 마이그레이션(`src/main/resources/db/migration`)으로 관리
-- 아직 로그인/인증이 없어서 모든 요청은 `DemoUserProvider`가 만드는 단일 데모 사용자 기준으로 동작합니다.
-  실제 JWT/OAuth2 인증이 붙으면 이 부분을 SecurityContext 기반으로 교체할 예정입니다.
+
+## 로그인 흐름 (카카오/네이버/구글/페이스북)
+프런트(Vercel)와 백엔드(Render)가 다른 도메인에 배포되는 구조라, Spring Security의 서버 주도
+리다이렉트 방식 대신 아래 흐름으로 구현했습니다.
+
+1. 프런트가 각 제공자의 인가 화면으로 사용자를 직접 이동시킴 (`redirect_uri`는 프런트 콜백 URL)
+2. 제공자가 프런트 콜백 URL로 `code`(네이버는 `state`도)를 붙여 리다이렉트
+3. 프런트가 그 `code`를 `POST /api/v1/auth/{provider}/login` 으로 백엔드에 전달
+4. 백엔드가 각 제공자의 토큰/사용자정보 엔드포인트를 직접 호출해 신원을 확인하고,
+   BookTalk 자체 access/refresh JWT를 발급해서 응답
+5. 이후 모든 API는 `Authorization: Bearer {accessToken}` 헤더로 인증
 
 ## API (Phase 1 - 코어 MVP)
 모든 응답은 `{ success, data, message }` 형태로 감싸져 내려갑니다.
 
-| 메서드 | 경로 | 설명 |
-|---|---|---|
-| POST | `/api/v1/books` | 책 등록(직접 입력). ISBN 중복 시 기존 책 반환 |
-| GET | `/api/v1/books?query=` | 책 검색(로컬 DB 대상, 알라딘 연동 전) |
-| GET | `/api/v1/books/{id}` | 책 상세 |
-| POST | `/api/v1/reading-records` | 독서 시작(`bookId`, `startDate`) |
-| PATCH | `/api/v1/reading-records/{id}/complete` | 완독 처리(`endDate`, `rating`, `oneLineNote`) |
-| GET | `/api/v1/reading-records?status=READING\|COMPLETED` | 내 독서 기록 목록 |
-| GET | `/api/v1/shelves/monthly?yearMonth=2026-07` | 월별 서재(완독한 책 목록 + 권수) |
+### 인증
+| 메서드 | 경로 | 인증 | 설명 |
+|---|---|---|---|
+| POST | `/api/v1/auth/{provider}/login` | - | 소셜 로그인. provider: `kakao`\|`naver`\|`google`\|`facebook` |
+| POST | `/api/v1/auth/refresh` | - | refreshToken으로 토큰 재발급 |
+| GET | `/api/v1/auth/me` | O | 내 정보 조회 |
+
+### 도서 / 독서 기록 / 서재
+| 메서드 | 경로 | 인증 | 설명 |
+|---|---|---|---|
+| POST | `/api/v1/books` | O | 책 등록(직접 입력). ISBN 중복 시 기존 책 반환 |
+| GET | `/api/v1/books?query=` | - | 책 검색(로컬 DB 대상, 알라딘 연동 전) |
+| GET | `/api/v1/books/{id}` | - | 책 상세 |
+| POST | `/api/v1/reading-records` | O | 독서 시작(`bookId`, `startDate`) |
+| PATCH | `/api/v1/reading-records/{id}/complete` | O | 완독 처리(`endDate`, `rating`, `oneLineNote`) |
+| GET | `/api/v1/reading-records?status=READING\|COMPLETED` | O | 내 독서 기록 목록 |
+| GET | `/api/v1/shelves/monthly?yearMonth=2026-07` | O | 월별 서재(완독한 책 목록 + 권수) |

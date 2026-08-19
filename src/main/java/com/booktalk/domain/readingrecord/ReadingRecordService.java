@@ -5,8 +5,8 @@ import com.booktalk.domain.book.BookRepository;
 import com.booktalk.domain.readingrecord.dto.ReadingRecordCompleteRequest;
 import com.booktalk.domain.readingrecord.dto.ReadingRecordResponse;
 import com.booktalk.domain.readingrecord.dto.ReadingRecordStartRequest;
-import com.booktalk.domain.user.DemoUserProvider;
 import com.booktalk.domain.user.User;
+import com.booktalk.global.security.CurrentUserResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,11 +21,11 @@ public class ReadingRecordService {
 
     private final ReadingRecordRepository readingRecordRepository;
     private final BookRepository bookRepository;
-    private final DemoUserProvider demoUserProvider;
+    private final CurrentUserResolver currentUserResolver;
 
     @Transactional
     public ReadingRecordResponse start(ReadingRecordStartRequest request) {
-        User user = demoUserProvider.getOrCreateDemoUser();
+        User user = currentUserResolver.getCurrentUser();
         Book book = bookRepository.findById(request.bookId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 책입니다. id=" + request.bookId()));
 
@@ -53,7 +53,7 @@ public class ReadingRecordService {
     }
 
     public List<ReadingRecordResponse> getMyRecords(String status) {
-        User user = demoUserProvider.getOrCreateDemoUser();
+        User user = currentUserResolver.getCurrentUser();
 
         List<ReadingRecord> records = (status == null || status.isBlank())
                 ? readingRecordRepository.findByUserOrderByIdDesc(user)
@@ -64,7 +64,7 @@ public class ReadingRecordService {
     }
 
     private ReadingRecord getOwnedRecord(Long id) {
-        User user = demoUserProvider.getOrCreateDemoUser();
+        User user = currentUserResolver.getCurrentUser();
         ReadingRecord record = readingRecordRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 독서 기록입니다. id=" + id));
 

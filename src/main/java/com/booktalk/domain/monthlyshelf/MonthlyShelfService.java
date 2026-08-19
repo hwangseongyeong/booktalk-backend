@@ -4,8 +4,8 @@ import com.booktalk.domain.monthlyshelf.dto.MonthlyShelfResponse;
 import com.booktalk.domain.monthlyshelf.dto.ShelfBookItem;
 import com.booktalk.domain.readingrecord.ReadingRecord;
 import com.booktalk.domain.readingrecord.ReadingRecordRepository;
-import com.booktalk.domain.user.DemoUserProvider;
 import com.booktalk.domain.user.User;
+import com.booktalk.global.security.CurrentUserResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,10 +28,10 @@ public class MonthlyShelfService {
     private static final DateTimeFormatter YEAR_MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
 
     private final ReadingRecordRepository readingRecordRepository;
-    private final DemoUserProvider demoUserProvider;
+    private final CurrentUserResolver currentUserResolver;
 
     public MonthlyShelfResponse getMonthlyShelf(String yearMonth) {
-        User user = demoUserProvider.getOrCreateDemoUser();
+        User user = currentUserResolver.getCurrentUser();
         YearMonth ym = parseYearMonth(yearMonth);
 
         List<ReadingRecord> records = readingRecordRepository
