@@ -13,12 +13,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 
 /**
- * 카카오 책 검색 API(다음 책 검색) 연동.
+ * 카카오 책 검색 API(dapi.kakao.com/v3/search/book) 연동.
  * 카카오 로그인에 쓰는 REST API 키(oauth2.kakao.client-id)를 그대로 재사용한다 —
  * 카카오 개발자 콘솔에서 발급하는 REST API 키는 로그인(client_id)과
  * 각종 카카오 API 호출(Authorization: KakaoAK) 양쪽에 공통으로 쓰인다.
  * 별도 승인 절차가 없어 알라딘과 달리 키만 있으면 바로 동작한다.
  *
+ * 검색어가 ISBN 형태(숫자 10/13자리)면 target=isbn으로 정확 검색하고, 그 외에는 통합 검색(query)으로 조회한다.
  * 키가 없거나 API 호출이 실패해도 예외를 던지지 않고 빈 목록을 반환해서 로컬 검색은 항상 살아있게 한다.
  */
 @Slf4j
@@ -37,11 +38,15 @@ public class KakaoBookClient {
             return List.of();
         }
 
-        String uri = UriComponentsBuilder.fromHttpUrl(SEARCH_URI)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(SEARCH_URI)
                 .queryParam("query", query)
-                .queryParam("size", size)
-                .build()
-                .toUriString();
+                .queryParam("size", size);
+
+        if (isIsbn(query)) {
+            builder.queryParam("target", "isbn");
+        }
+
+        String uri = builder.build(false).toUriString();
 
         try {
             KakaoBookSearchResponse response = restClient.get()
@@ -63,6 +68,11 @@ public class KakaoBookClient {
         }
     }
 
+    private boolean isIsbn(String query) {
+        String digits = query.replaceAll("[\\s-]", "");
+        return digits.matches("\\d{10}|\\d{13}");
+    }
+
     private ExternalBookInfo toBookInfo(KakaoBookDocument doc) {
         String isbn = extractIsbn13(doc.isbn());
         String author = (doc.authors() != null && !doc.authors().isEmpty())
@@ -71,7 +81,7 @@ public class KakaoBookClient {
         return new ExternalBookInfo(isbn, stripHtmlTags(doc.title()), author, doc.publisher(), doc.thumbnail());
     }
 
-    // 카카오는 isbn 필드에 "isbn10 isbn13"이 공백으로 같이 내려온다. 13자리를 우선 사용.
+    // 카카오 isbn 필드는 "ISBN10 ISBN13" 형태로 공백 구분되어 올 수 있다. 13자리를 우선 사용.
     private String extractIsbn13(String isbnField) {
         if (isbnField == null || isbnField.isBlank()) {
             return null;

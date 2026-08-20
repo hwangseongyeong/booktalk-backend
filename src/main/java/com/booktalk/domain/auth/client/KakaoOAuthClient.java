@@ -5,13 +5,18 @@ import com.booktalk.domain.auth.OAuthUserInfo;
 import com.booktalk.domain.auth.client.property.KakaoProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
+import java.nio.charset.StandardCharsets;
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class KakaoOAuthClient implements OAuthClient {
@@ -49,6 +54,11 @@ public class KakaoOAuthClient implements OAuthClient {
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(form)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, (req, res) -> {
+                    String body = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                    log.warn("카카오 토큰 발급 실패 (status={}): {}", res.getStatusCode(), body);
+                    throw new IllegalStateException("카카오 토큰 발급에 실패했습니다: " + body);
+                })
                 .body(KakaoTokenResponse.class);
 
         if (response == null || response.accessToken() == null) {
@@ -62,6 +72,11 @@ public class KakaoOAuthClient implements OAuthClient {
                 .uri(USER_INFO_URI)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, (req, res) -> {
+                    String body = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                    log.warn("카카오 사용자 정보 조회 실패 (status={}): {}", res.getStatusCode(), body);
+                    throw new IllegalStateException("카카오 사용자 정보 조회에 실패했습니다: " + body);
+                })
                 .body(KakaoUserResponse.class);
 
         if (response == null) {

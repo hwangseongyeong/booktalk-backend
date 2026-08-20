@@ -4,8 +4,8 @@
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/booktalk?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: root
-    password: your_local_password
+    username: booktalk
+    password: booktalk
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 jwt:
@@ -33,12 +33,6 @@ oauth2:
     client-id: your-facebook-app-id
     client-secret: your-facebook-app-secret
     redirect-uri: http://localhost:3000/oauth/callback/facebook
-
-aladin:
-  # 현재는 카카오 책 검색을 쓰고 있어서 미사용입니다(설정 안 해도 됨).
-  # 알라딘으로 전환하고 싶으면 BookService에서 KakaoBookClient 대신 AladinClient를 주입하면 됩니다.
-  # https://blog.aladin.co.kr/openapi/ 에서 TTBKey 발급 (승인까지 며칠 걸릴 수 있음)
-  ttb-key: your-aladin-ttb-key
 
 storage:
   # local: 로컬 디스크에 저장 (R2/AWS 계정 없어도 바로 동작, 기본값)
