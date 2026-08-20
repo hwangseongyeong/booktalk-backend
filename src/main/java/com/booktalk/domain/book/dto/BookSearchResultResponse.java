@@ -1,15 +1,15 @@
 package com.booktalk.domain.book.dto;
 
 import com.booktalk.domain.book.Book;
-import com.booktalk.domain.book.external.AladinBookInfo;
+import com.booktalk.domain.book.external.ExternalBookInfo;
 
 /**
  * 도서 검색 결과 한 건.
- * id가 있으면 이미 로컬 DB에 등록된 책(바로 읽기 시작 가능), null이면 알라딘에서만 찾은 책(등록부터 필요).
+ * id가 있으면 이미 로컬 DB에 등록된 책(바로 읽기 시작 가능), null이면 외부 API에서만 찾은 책(등록부터 필요).
  */
 public record BookSearchResultResponse(
         Long id,
-        String source, // "LOCAL" | "ALADIN"
+        String source, // "LOCAL" | "KAKAO"
         String isbn,
         String title,
         String author,
@@ -28,10 +28,10 @@ public record BookSearchResultResponse(
         );
     }
 
-    public static BookSearchResultResponse fromAladin(AladinBookInfo info) {
+    public static BookSearchResultResponse fromExternal(String source, ExternalBookInfo info) {
         return new BookSearchResultResponse(
                 null,
-                "ALADIN",
+                source,
                 info.isbn(),
                 info.title(),
                 info.author(),

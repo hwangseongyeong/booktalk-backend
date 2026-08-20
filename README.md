@@ -11,7 +11,7 @@
 2. 로컬 설정 파일 준비
    ```bash
    cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
-   # 값 채워넣기 (DB 접속정보, JWT secret, 알라딘 API 키, Cloudflare R2 등)
+   # 값 채워넣기 (DB 접속정보, JWT secret, 카카오 API 키 등)
    ```
 3. 실행
    ```bash
@@ -22,8 +22,9 @@
 ## 개발 시 참고
 - 이 프로젝트의 컨벤션/우선순위는 `CLAUDE.md` 참고 (Claude Code 사용 시에도 이 문서를 자동으로 읽습니다)
 - 스키마 변경은 반드시 Flyway 마이그레이션(`src/main/resources/db/migration`)으로 관리
-- 알라딘 검색(`AladinClient`)은 TTBKey가 없거나 알라딘 API가 응답하지 않아도 예외를 던지지 않고 빈 목록을 반환합니다.
-  로컬 DB 검색 결과는 항상 정상적으로 내려가니, 로컬 개발 중 TTBKey 없이도 앱은 문제없이 동작합니다.
+- 도서 검색(`KakaoBookClient`)은 카카오 로그인과 같은 REST API 키를 재사용합니다. 승인 대기가 없어 키만 있으면 바로 동작합니다.
+  키가 없거나 카카오 API가 응답하지 않아도 예외를 던지지 않고 빈 목록을 반환하므로, 로컬 DB 검색 결과는 항상 정상적으로 내려갑니다.
+  (알라딘 연동(`AladinClient`)도 코드는 남아있지만 현재는 사용하지 않습니다 — TTBKey 승인 나면 전환 가능)
 
 ## 책등 이미지 파이프라인
 책 등록(`POST /api/v1/books`) 시 `BookService.register()` 안에서 1회 자동으로 실행됩니다.
@@ -74,7 +75,7 @@
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
 | POST | `/api/v1/books` | O | 책 등록(직접 입력). ISBN 중복 시 기존 책 반환 |
-| GET | `/api/v1/books?query=` | - | 책 검색. 로컬 DB + 알라딘 API 결과를 함께 반환 (`id`가 있으면 이미 등록된 책, 없으면 알라딘 결과라 등록 먼저 필요) |
+| GET | `/api/v1/books?query=` | - | 책 검색. 로컬 DB + 카카오 책 검색 결과를 함께 반환 (`id`가 있으면 이미 등록된 책, 없으면 카카오 결과라 등록 먼저 필요) |
 | GET | `/api/v1/books/{id}` | - | 책 상세 |
 | POST | `/api/v1/reading-records` | O | 독서 시작(`bookId`, `startDate`) |
 | PATCH | `/api/v1/reading-records/{id}/complete` | O | 완독 처리(`endDate`, `rating`, `oneLineNote`) |

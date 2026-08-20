@@ -14,6 +14,9 @@ import java.util.List;
  * 알라딘 상품검색 API(ItemSearch.aspx) 연동.
  * TTBKey가 없으면 조용히 빈 목록을 반환해서, 로컬 DB 검색만으로도 앱이 정상 동작하게 한다.
  * 알라딘 쪽 장애/응답 이상도 검색 자체를 실패시키지 않고 빈 목록으로 흡수한다(로컬 검색 결과는 보여줘야 하므로).
+ *
+ * 현재 BookService는 승인 대기가 필요 없는 KakaoBookClient를 사용 중이라 이 클래스는 호출되지 않는다.
+ * TTBKey 승인을 받으면 BookService에서 이 클라이언트로 다시 바꾸거나 카카오와 병행할 수 있다.
  */
 @Slf4j
 @Component

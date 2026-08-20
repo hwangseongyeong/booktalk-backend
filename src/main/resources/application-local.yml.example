@@ -18,6 +18,9 @@ oauth2:
     client-id: your-kakao-rest-api-key
     client-secret: your-kakao-client-secret   # 카카오 개발자 콘솔에서 "Client Secret 사용"을 켠 경우만 필요
     redirect-uri: http://localhost:3000/oauth/callback/kakao
+    # ↑ 이 client-id(REST API 키)를 카카오 책 검색 API(KakaoBookClient)에도 그대로 재사용합니다.
+    #   카카오 개발자 콘솔 > 내 애플리케이션 > 앱 키 > REST API 키
+    #   책 검색을 쓰려면 콘솔에서 "카카오 로그인" 뿐 아니라 "다음 책 검색" 등 검색 API 사용 동의가 필요할 수 있습니다.
   naver:
     client-id: your-naver-client-id
     client-secret: your-naver-client-secret
@@ -32,8 +35,9 @@ oauth2:
     redirect-uri: http://localhost:3000/oauth/callback/facebook
 
 aladin:
+  # 현재는 카카오 책 검색을 쓰고 있어서 미사용입니다(설정 안 해도 됨).
+  # 알라딘으로 전환하고 싶으면 BookService에서 KakaoBookClient 대신 AladinClient를 주입하면 됩니다.
   # https://blog.aladin.co.kr/openapi/ 에서 TTBKey 발급 (승인까지 며칠 걸릴 수 있음)
-  # 비워두면 알라딘 검색 없이 로컬 DB 검색만 동작합니다.
   ttb-key: your-aladin-ttb-key
 
 storage:
