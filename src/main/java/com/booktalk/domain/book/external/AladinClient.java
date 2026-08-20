@@ -28,7 +28,7 @@ public class AladinClient {
     private final AladinProperties properties;
     private final RestClient restClient = RestClient.create();
 
-    public List<AladinBookInfo> search(String query, int maxResults) {
+    public List<ExternalBookInfo> search(String query, int maxResults) {
         if (properties.ttbKey() == null || properties.ttbKey().isBlank()) {
             return List.of();
         }
@@ -65,9 +65,9 @@ public class AladinClient {
         }
     }
 
-    private AladinBookInfo toBookInfo(AladinItem item) {
+    private ExternalBookInfo toBookInfo(AladinItem item) {
         String isbn = (item.isbn13() != null && !item.isbn13().isBlank()) ? item.isbn13() : item.isbn();
-        return new AladinBookInfo(isbn, item.title(), item.author(), item.publisher(), item.cover());
+        return new ExternalBookInfo(isbn, item.title(), item.author(), item.publisher(), item.cover());
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
