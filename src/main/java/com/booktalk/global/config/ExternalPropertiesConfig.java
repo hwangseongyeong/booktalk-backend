@@ -4,6 +4,7 @@ import com.booktalk.domain.auth.client.property.FacebookProperties;
 import com.booktalk.domain.auth.client.property.GoogleProperties;
 import com.booktalk.domain.auth.client.property.KakaoProperties;
 import com.booktalk.domain.auth.client.property.NaverProperties;
+import com.booktalk.domain.book.external.AladinProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,7 +13,8 @@ import org.springframework.context.annotation.Configuration;
         KakaoProperties.class,
         NaverProperties.class,
         GoogleProperties.class,
-        FacebookProperties.class
+        FacebookProperties.class,
+        AladinProperties.class
 })
-public class OAuthPropertiesConfig {
+public class ExternalPropertiesConfig {
 }

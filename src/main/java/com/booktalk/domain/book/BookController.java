@@ -2,6 +2,7 @@ package com.booktalk.domain.book;
 
 import com.booktalk.domain.book.dto.BookRegisterRequest;
 import com.booktalk.domain.book.dto.BookResponse;
+import com.booktalk.domain.book.dto.BookSearchResultResponse;
 import com.booktalk.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,8 +28,9 @@ public class BookController {
         return ApiResponse.success(bookService.register(request));
     }
 
+    /** 도서 검색. 로컬 DB 등록 여부(id 유무)와 알라딘 결과를 함께 내려준다. */
     @GetMapping
-    public ApiResponse<List<BookResponse>> search(@RequestParam(required = false) String query) {
+    public ApiResponse<List<BookSearchResultResponse>> search(@RequestParam(required = false) String query) {
         return ApiResponse.success(bookService.search(query));
     }
 

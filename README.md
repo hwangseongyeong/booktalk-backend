@@ -22,6 +22,8 @@
 ## 개발 시 참고
 - 이 프로젝트의 컨벤션/우선순위는 `CLAUDE.md` 참고 (Claude Code 사용 시에도 이 문서를 자동으로 읽습니다)
 - 스키마 변경은 반드시 Flyway 마이그레이션(`src/main/resources/db/migration`)으로 관리
+- 알라딘 검색(`AladinClient`)은 TTBKey가 없거나 알라딘 API가 응답하지 않아도 예외를 던지지 않고 빈 목록을 반환합니다.
+  로컬 DB 검색 결과는 항상 정상적으로 내려가니, 로컬 개발 중 TTBKey 없이도 앱은 문제없이 동작합니다.
 
 ## 로그인 흐름 (카카오/네이버/구글/페이스북)
 프런트(Vercel)와 백엔드(Render)가 다른 도메인에 배포되는 구조라, Spring Security의 서버 주도
@@ -48,7 +50,7 @@
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
 | POST | `/api/v1/books` | O | 책 등록(직접 입력). ISBN 중복 시 기존 책 반환 |
-| GET | `/api/v1/books?query=` | - | 책 검색(로컬 DB 대상, 알라딘 연동 전) |
+| GET | `/api/v1/books?query=` | - | 책 검색. 로컬 DB + 알라딘 API 결과를 함께 반환 (`id`가 있으면 이미 등록된 책, 없으면 알라딘 결과라 등록 먼저 필요) |
 | GET | `/api/v1/books/{id}` | - | 책 상세 |
 | POST | `/api/v1/reading-records` | O | 독서 시작(`bookId`, `startDate`) |
 | PATCH | `/api/v1/reading-records/{id}/complete` | O | 완독 처리(`endDate`, `rating`, `oneLineNote`) |
