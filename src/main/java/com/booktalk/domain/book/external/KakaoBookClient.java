@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -62,7 +61,7 @@ public class KakaoBookClient {
             return response.documents().stream()
                     .map(this::toBookInfo)
                     .toList();
-        } catch (RestClientException | RuntimeException e) {
+        } catch (RuntimeException e) {
             log.warn("카카오 책 검색 실패 (query={}): {}", query, e.getMessage());
             return List.of();
         }
