@@ -11,7 +11,7 @@
 2. 로컬 설정 파일 준비
    ```bash
    cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
-   # 값 채워넣기 (DB 접속정보, JWT secret, 알라딘 API 키, AWS 등)
+   # 값 채워넣기 (DB 접속정보, JWT secret, 알라딘 API 키, Cloudflare R2 등)
    ```
 3. 실행
    ```bash
@@ -24,6 +24,23 @@
 - 스키마 변경은 반드시 Flyway 마이그레이션(`src/main/resources/db/migration`)으로 관리
 - 알라딘 검색(`AladinClient`)은 TTBKey가 없거나 알라딘 API가 응답하지 않아도 예외를 던지지 않고 빈 목록을 반환합니다.
   로컬 DB 검색 결과는 항상 정상적으로 내려가니, 로컬 개발 중 TTBKey 없이도 앱은 문제없이 동작합니다.
+
+## 책등 이미지 파이프라인
+책 등록(`POST /api/v1/books`) 시 `BookService.register()` 안에서 1회 자동으로 실행됩니다.
+
+1. `ImageColorExtractor`가 표지 이미지(`coverImageUrl`)를 내려받아 대표색(primary)/보조색(accent)을 추출
+   (순수 `ImageIO` + 색상 양자화, 외부 라이브러리 없음). 표지가 없거나 추출에 실패하면
+   `FallbackPalette`가 제목 기반으로 고정 팔레트 색상을 대신 골라줍니다.
+2. `SpineSvgBuilder`가 그 색상으로 책등 모양 SVG를 문자열로 직접 생성
+3. `R2Client`(AWS S3 SDK를 Cloudflare R2 커스텀 엔드포인트로 사용)가 SVG를 업로드하고 공개 URL을 반환
+4. `Book.updateSpineAssets()`로 `spineImageUrl`/`primaryColor`/`accentColor`를 채움
+
+**R2 미설정 시**: `R2Properties.isConfigured()`가 false면 업로드를 건너뛰고 색상만 채웁니다.
+프런트는 `spineImageUrl`이 없으면 `primaryColor` 배경의 색상 블록으로 자동 대체해서 보여주므로,
+R2 설정 전에도(또는 표지 이미지가 없는 책도) 서재 화면이 비어 보이지 않습니다.
+
+R2 API 토큰은 Cloudflare 대시보드 > R2 > Manage API tokens에서 발급하고,
+버킷의 "Public access"를 켜면 나오는 `https://pub-xxxx.r2.dev` 주소를 `public-base-url`에 넣으면 됩니다.
 
 ## 로그인 흐름 (카카오/네이버/구글/페이스북)
 프런트(Vercel)와 백엔드(Render)가 다른 도메인에 배포되는 구조라, Spring Security의 서버 주도
