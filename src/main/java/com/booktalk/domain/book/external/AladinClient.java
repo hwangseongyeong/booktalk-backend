@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -56,7 +55,7 @@ public class AladinClient {
             return response.item().stream()
                     .map(this::toBookInfo)
                     .toList();
-        } catch (RestClientException | RuntimeException e) {
+        } catch (RuntimeException e) {
             log.warn("알라딘 API 검색 실패 (query={}): {}", query, e.getMessage());
             return List.of();
         }
