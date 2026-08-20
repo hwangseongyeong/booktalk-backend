@@ -19,5 +19,8 @@ application-local.yml
 *.env
 .env.local
 
+### Local file storage (storage.mode=local) ###
+/uploads/
+
 ### macOS ###
 .DS_Store

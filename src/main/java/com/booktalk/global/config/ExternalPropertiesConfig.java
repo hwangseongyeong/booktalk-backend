@@ -5,6 +5,7 @@ import com.booktalk.domain.auth.client.property.GoogleProperties;
 import com.booktalk.domain.auth.client.property.KakaoProperties;
 import com.booktalk.domain.auth.client.property.NaverProperties;
 import com.booktalk.domain.book.external.AladinProperties;
+import com.booktalk.domain.book.spine.LocalStorageProperties;
 import com.booktalk.domain.book.spine.R2Properties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +17,8 @@ import org.springframework.context.annotation.Configuration;
         GoogleProperties.class,
         FacebookProperties.class,
         AladinProperties.class,
-        R2Properties.class
+        R2Properties.class,
+        LocalStorageProperties.class
 })
 public class ExternalPropertiesConfig {
 }

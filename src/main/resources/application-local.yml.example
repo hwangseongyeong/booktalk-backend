@@ -36,6 +36,15 @@ aladin:
   # 비워두면 알라딘 검색 없이 로컬 DB 검색만 동작합니다.
   ttb-key: your-aladin-ttb-key
 
+storage:
+  # local: 로컬 디스크에 저장 (R2/AWS 계정 없어도 바로 동작, 기본값)
+  # r2   : Cloudflare R2에 저장 (계정 만들면 이 값만 r2로 바꾸면 됨)
+  mode: local
+  local:
+    upload-dir: ./uploads                          # 프로젝트 루트 기준 상대경로 (원하면 절대경로로 변경)
+    public-base-url: http://localhost:8080/uploads  # 배포 시 실제 서버 주소로 변경
+
+# storage.mode: r2 로 바꿨을 때 사용되는 설정 (지금은 안 읽힘)
 r2:
   # Cloudflare 대시보드 > R2 > 계정 ID
   account-id: your-cloudflare-account-id
@@ -44,5 +53,4 @@ r2:
   secret-key: your-r2-secret-key
   bucket: booktalk-spine-images
   # 버킷 설정에서 Public access를 켜면 나오는 https://pub-xxxx.r2.dev 주소, 또는 연결한 커스텀 도메인
-  # 비워두면(또는 account-id/bucket 중 하나라도 비어있으면) 책등 이미지 업로드 없이 색상만 채웁니다.
   public-base-url: https://pub-xxxxxxxxxxxx.r2.dev

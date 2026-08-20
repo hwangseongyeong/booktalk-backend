@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll() // 책등 이미지(로컬 저장 모드) 공개 접근
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )

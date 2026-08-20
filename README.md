@@ -32,15 +32,22 @@
    (순수 `ImageIO` + 색상 양자화, 외부 라이브러리 없음). 표지가 없거나 추출에 실패하면
    `FallbackPalette`가 제목 기반으로 고정 팔레트 색상을 대신 골라줍니다.
 2. `SpineSvgBuilder`가 그 색상으로 책등 모양 SVG를 문자열로 직접 생성
-3. `R2Client`(AWS S3 SDK를 Cloudflare R2 커스텀 엔드포인트로 사용)가 SVG를 업로드하고 공개 URL을 반환
+3. `SpineStorage` 구현체가 SVG를 저장하고 공개 URL을 반환 (`storage.mode`로 전환)
 4. `Book.updateSpineAssets()`로 `spineImageUrl`/`primaryColor`/`accentColor`를 채움
 
-**R2 미설정 시**: `R2Properties.isConfigured()`가 false면 업로드를 건너뛰고 색상만 채웁니다.
-프런트는 `spineImageUrl`이 없으면 `primaryColor` 배경의 색상 블록으로 자동 대체해서 보여주므로,
-R2 설정 전에도(또는 표지 이미지가 없는 책도) 서재 화면이 비어 보이지 않습니다.
+### 저장 방식 전환 (로컬 ↔ R2)
+`storage.mode` 값에 따라 스프링이 두 구현체 중 하나만 빈으로 올립니다.
 
-R2 API 토큰은 Cloudflare 대시보드 > R2 > Manage API tokens에서 발급하고,
-버킷의 "Public access"를 켜면 나오는 `https://pub-xxxx.r2.dev` 주소를 `public-base-url`에 넣으면 됩니다.
+- **`local` (기본값)** — `LocalSpineStorage`가 `storage.local.upload-dir` 아래 `spines/{bookId}.svg`로 저장하고,
+  `LocalUploadResourceConfig`가 그 디렉터리를 `/uploads/**` 정적 경로로 서빙합니다.
+  R2/AWS 계정이 없어도 바로 동작합니다. (`.gitignore`에 `/uploads/` 추가되어 있어 커밋 안 됨)
+- **`r2`** — `R2SpineStorage`가 Cloudflare R2(S3 호환 API)에 업로드합니다.
+  R2 계정 만드시면 `application-local.yml`에서 `storage.mode: r2`로 바꾸고 `r2:` 섹션만 채우면 됩니다.
+  R2 API 토큰은 Cloudflare 대시보드 > R2 > Manage API tokens에서 발급하고,
+  버킷의 "Public access"를 켜면 나오는 `https://pub-xxxx.r2.dev` 주소를 `public-base-url`에 넣으면 됩니다.
+
+두 방식 모두 업로드가 실패해도(디스크 오류, R2 미설정 등) 등록 자체는 막지 않고 색상만 채웁니다.
+프런트는 `spineImageUrl`이 없으면 `primaryColor` 배경의 색상 블록으로 자동 대체해서 보여줍니다.
 
 ## 로그인 흐름 (카카오/네이버/구글/페이스북)
 프런트(Vercel)와 백엔드(Render)가 다른 도메인에 배포되는 구조라, Spring Security의 서버 주도
