@@ -3,8 +3,8 @@ package com.booktalk.domain.book;
 import com.booktalk.domain.book.dto.BookRegisterRequest;
 import com.booktalk.domain.book.dto.BookResponse;
 import com.booktalk.domain.book.dto.BookSearchResultResponse;
-import com.booktalk.domain.book.external.AladinBookInfo;
-import com.booktalk.domain.book.external.AladinClient;
+import com.booktalk.domain.book.external.KakaoBookInfo;
+import com.booktalk.domain.book.external.KakaoBookClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +19,10 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class BookService {
 
-    private static final int ALADIN_MAX_RESULTS = 10;
+    private static final int KAKAO_MAX_RESULTS = 10;
 
     private final BookRepository bookRepository;
-    private final AladinClient aladinClient;
+    private final KakaoBookClient kakaoBookClient;
 
     /**
      * 도서 등록. ISBN이 이미 등록되어 있으면 새로 만들지 않고 기존 책을 반환한다(중복 등록 방지).
@@ -50,9 +50,9 @@ public class BookService {
     }
 
     /**
-     * 도서 검색. 로컬 DB(이미 등록된 책) 결과를 먼저 보여주고, 검색어가 있으면 알라딘 API 결과를 이어붙인다.
-     * 알라딘 결과 중 이미 로컬에 등록된(ISBN 동일) 책은 중복으로 보여주지 않는다.
-     * 알라딘 TTBKey가 없거나 알라딘 API가 실패해도 로컬 검색 결과는 그대로 반환된다.
+     * 도서 검색. 로컬 DB(이미 등록된 책) 결과를 먼저 보여주고, 검색어가 있으면 카카오 책 검색 결과를 이어붙인다.
+     * 카카오 결과 중 이미 로컬에 등록된(ISBN 동일) 책은 중복으로 보여주지 않는다.
+     * 카카오 REST API 키가 없거나 API가 실패해도 로컬 검색 결과는 그대로 반환된다.
      */
     public List<BookSearchResultResponse> search(String query) {
         List<Book> localBooks = (query == null || query.isBlank())
@@ -71,12 +71,12 @@ public class BookService {
                 }
             }
 
-            List<AladinBookInfo> aladinResults = aladinClient.search(query, ALADIN_MAX_RESULTS);
-            for (AladinBookInfo info : aladinResults) {
+            List<KakaoBookInfo> kakaoResults = kakaoBookClient.search(query, KAKAO_MAX_RESULTS);
+            for (KakaoBookInfo info : kakaoResults) {
                 if (info.isbn() != null && localIsbns.contains(info.isbn())) {
                     continue;
                 }
-                results.add(BookSearchResultResponse.fromAladin(info));
+                results.add(BookSearchResultResponse.fromKakao(info));
             }
         }
 

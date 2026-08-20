@@ -31,10 +31,10 @@ oauth2:
     client-secret: your-facebook-app-secret
     redirect-uri: http://localhost:3000/oauth/callback/facebook
 
-aladin:
-  # https://blog.aladin.co.kr/openapi/ 에서 TTBKey 발급 (승인까지 며칠 걸릴 수 있음)
-  # 비워두면 알라딘 검색 없이 로컬 DB 검색만 동작합니다.
-  ttb-key: your-aladin-ttb-key
+kakao:
+  # 카카오 책 검색 API 인증키 (카카오 로그인용 REST API 키와 동일한 값)
+  # 비워두면 카카오 검색 없이 로컬 DB 검색만 동작합니다.
+  rest-api-key: your-kakao-rest-api-key
 
 aws:
   s3:
