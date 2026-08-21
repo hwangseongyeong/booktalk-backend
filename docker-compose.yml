@@ -24,6 +24,10 @@ services:
       retries: 10
 
   app:
+    # ECR_REPOSITORY_URI에는 태그까지 포함된 전체 이미지 경로가 들어간다
+    # (예: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/booktalk-backend:latest).
+    # CI/CD가 배포 시 이 값을 export해서 넘겨주고, 없으면 로컬 빌드용 기본 태그를 쓴다.
+    image: ${ECR_REPOSITORY_URI:-booktalk-backend:latest}
     build: .
     restart: unless-stopped
     depends_on:

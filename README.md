@@ -124,3 +124,54 @@ docker compose logs -f app   # 정상 기동 확인
 - 책등 이미지는 기본값(`STORAGE_MODE=local`)이면 `uploads-data` 볼륨에 저장되어 `docker compose down`/재시작에도 유지됩니다.
   다만 EC2 인스턴스 자체를 지우면 함께 사라지므로, 나중에 여유 생기면 `STORAGE_MODE=r2`(또는 AWS S3)로 옮기는 걸 추천합니다.
 - MySQL도 같은 EC2 인스턴스 안에서 컨테이너로 도는 구조라 별도 RDS 비용이 없습니다. 트래픽이 늘어나면 그때 RDS 분리를 고려하면 됩니다.
+
+## CI/CD (GitHub Actions)
+
+`main`에 push하면 `.github/workflows/deploy.yml`이 자동으로 실행됩니다.
+
+```
+push to main
+  → GitHub Actions 러너에서 Docker 이미지 빌드 (EC2가 아니라 러너에서 빌드 — 메모리 작은 t3.micro에서
+    직접 빌드하면 OOM 위험이 있어서 이렇게 분리함)
+  → Amazon ECR에 이미지 push
+  → EC2에 SSH 접속해서 새 이미지 pull + docker compose up -d
+```
+
+### 1. AWS 쪽 준비 (최초 1회)
+
+**ECR 저장소 생성**
+```bash
+aws ecr create-repository --repository-name booktalk-backend --region ap-northeast-2
+```
+
+**EC2에 ECR pull 권한 부여** (인스턴스에 IAM 역할 연결)
+1. IAM → 역할 생성 → 신뢰할 수 있는 개체: EC2
+2. 정책: `AmazonEC2ContainerRegistryReadOnly` 연결
+3. EC2 콘솔 → 인스턴스 선택 → 작업 → 보안 → IAM 역할 수정 → 방금 만든 역할 연결
+4. EC2에 AWS CLI 설치 (Ubuntu 기준): `sudo apt install -y awscli` (또는 AWS CLI v2 공식 설치 스크립트)
+
+**GitHub Actions용 IAM 사용자 생성** (ECR push 권한)
+1. IAM → 사용자 생성 (예: `github-actions-deploy`)
+2. 정책: `AmazonEC2ContainerRegistryPowerUser` 연결
+3. 액세스 키 발급 (Access key ID / Secret access key 기록해두기)
+
+### 2. GitHub Secrets 등록
+
+저장소 → Settings → Secrets and variables → Actions → New repository secret
+
+| 이름 | 값 |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | 위에서 발급한 IAM 사용자 액세스 키 |
+| `AWS_SECRET_ACCESS_KEY` | 위 액세스 키의 시크릿 |
+| `AWS_REGION` | `ap-northeast-2` |
+| `EC2_HOST` | EC2 Elastic IP 또는 `api.booktalk.io.kr` |
+| `EC2_SSH_USER` | `ubuntu` (AMI에 따라 다름) |
+| `EC2_SSH_KEY` | EC2 접속용 `.pem` 파일 내용 전체 (`cat your-key.pem` 결과 그대로 붙여넣기) |
+
+### 3. 확인
+
+`main`에 push하면 저장소 "Actions" 탭에서 진행 상황을 볼 수 있습니다. 실패하면 어느 step에서 막혔는지 로그로 바로 확인 가능합니다.
+
+### 참고
+- EC2에서 최초 배포(`docker compose up -d --build`)는 여전히 수동으로 한 번 해야 합니다. 그 이후부터 push할 때마다 자동 배포됩니다.
+- 롤백이 필요하면 GitHub Actions가 커밋 SHA로도 태그를 남겨두므로(`:latest` 외 `:{sha}`), EC2에서 `docker compose pull`을 특정 태그로 지정해서 이전 버전으로 되돌릴 수 있습니다.
