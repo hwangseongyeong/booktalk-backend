@@ -1,7 +1,6 @@
-# {$DOMAIN} 환경변수 또는 아래 값을 실제 도메인으로 바꿔서 사용.
-# 도메인이 아직 없다면 EC2 퍼블릭 IP로 우선 HTTP만 열어두고,
-# 도메인 연결 후 이 값을 도메인으로 바꾸면 Caddy가 Let's Encrypt 인증서를 자동 발급/갱신한다.
+# Caddy가 이 도메인으로 들어오는 요청에 자동으로 Let's Encrypt HTTPS 인증서를 발급/갱신한다.
 
-your-domain.com {
+api.booktalk.io.kr {
 	reverse_proxy app:8080
 }
+
