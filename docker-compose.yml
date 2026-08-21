@@ -1,0 +1,85 @@
+# EC2에 이 저장소를 clone/rsync한 뒤 사용하는 프로덕션 compose 파일.
+# 실제 비밀값은 커밋하지 말고 EC2 서버의 .env 파일에 채워서 사용한다 (.env.example 참고).
+#
+# 사용법:
+#   docker compose up -d --build     # 최초 실행/재빌드
+#   docker compose logs -f app       # 앱 로그 확인
+#   docker compose down              # 중지 (볼륨은 유지됨)
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: booktalk
+      MYSQL_USER: booktalk
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/booktalk?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: booktalk
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRE_MS: 3600000
+      JWT_REFRESH_TOKEN_EXPIRE_MS: 1209600000
+
+      OAUTH2_KAKAO_CLIENT_ID: ${OAUTH2_KAKAO_CLIENT_ID}
+      OAUTH2_KAKAO_CLIENT_SECRET: ${OAUTH2_KAKAO_CLIENT_SECRET}
+      OAUTH2_KAKAO_REDIRECT_URI: ${OAUTH2_KAKAO_REDIRECT_URI}
+
+      OAUTH2_NAVER_CLIENT_ID: ${OAUTH2_NAVER_CLIENT_ID}
+      OAUTH2_NAVER_CLIENT_SECRET: ${OAUTH2_NAVER_CLIENT_SECRET}
+      OAUTH2_NAVER_REDIRECT_URI: ${OAUTH2_NAVER_REDIRECT_URI}
+
+      OAUTH2_GOOGLE_CLIENT_ID: ${OAUTH2_GOOGLE_CLIENT_ID}
+      OAUTH2_GOOGLE_CLIENT_SECRET: ${OAUTH2_GOOGLE_CLIENT_SECRET}
+      OAUTH2_GOOGLE_REDIRECT_URI: ${OAUTH2_GOOGLE_REDIRECT_URI}
+
+      OAUTH2_FACEBOOK_CLIENT_ID: ${OAUTH2_FACEBOOK_CLIENT_ID}
+      OAUTH2_FACEBOOK_CLIENT_SECRET: ${OAUTH2_FACEBOOK_CLIENT_SECRET}
+      OAUTH2_FACEBOOK_REDIRECT_URI: ${OAUTH2_FACEBOOK_REDIRECT_URI}
+
+      # 책등 이미지: 우선 로컬 저장(볼륨으로 유지). 나중에 S3/R2로 전환하려면
+      # STORAGE_MODE=r2 로 바꾸고 R2_* 환경변수를 추가하면 된다.
+      STORAGE_MODE: local
+      STORAGE_LOCAL_UPLOAD_DIR: /app/uploads
+      STORAGE_LOCAL_PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}/uploads
+    volumes:
+      - uploads-data:/app/uploads
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  mysql-data:
+  uploads-data:
+  caddy-data:
+  caddy-config:

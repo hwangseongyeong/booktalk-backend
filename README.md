@@ -81,3 +81,46 @@
 | PATCH | `/api/v1/reading-records/{id}/complete` | O | 완독 처리(`endDate`, `rating`, `oneLineNote`) |
 | GET | `/api/v1/reading-records?status=READING\|COMPLETED` | O | 내 독서 기록 목록 |
 | GET | `/api/v1/shelves/monthly?yearMonth=2026-07` | O | 월별 서재(완독한 책 목록 + 권수) |
+
+## EC2 배포
+
+ALB 없이 EC2 한 대에 앱+MySQL+Caddy(자동 HTTPS)를 `docker-compose`로 함께 띄우는 방식.
+(ECS/Elastic Beanstalk는 ALB 고정비가 트래픽 0이어도 월 15~20달러 이상 나가서, 트래픽 거의 없는 개발 단계에는 이 방식이 훨씬 저렴합니다.)
+
+### 1. EC2 인스턴스 준비
+- **인스턴스 타입**: `t3.micro` 또는 `t4g.micro` (ARM, 더 저렴)
+- **AMI**: Ubuntu 22.04/24.04 또는 Amazon Linux 2023
+- **보안 그룹**: 22(SSH, 내 IP만), 80(HTTP), 443(HTTPS) 인바운드 허용
+- **Elastic IP** 할당해서 재부팅해도 IP 안 바뀌게 해두는 걸 추천
+
+### 2. 서버에 Docker 설치
+```bash
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin
+sudo usermod -aG docker $USER   # 다시 로그인해야 적용됨
+```
+
+### 3. 저장소 배포
+```bash
+git clone https://github.com/hwangseongyeong/booktalk-backend.git
+cd booktalk-backend
+cp .env.example .env
+nano .env   # 실제 값 채우기 (DB 비밀번호, JWT_SECRET, 소셜 로그인 키 등)
+```
+
+도메인이 있다면 `Caddyfile`의 `your-domain.com`을 실제 도메인으로, 없다면 우선 `:80 { reverse_proxy app:8080 }` 형태로 바꿔서 IP로만 접속 (이 경우 HTTPS는 나중에 도메인 연결 후 적용).
+
+### 4. 실행
+```bash
+docker compose up -d --build
+docker compose logs -f app   # 정상 기동 확인
+```
+
+### 5. 프런트/소셜 로그인 콘솔에 반영
+- Vercel의 `NEXT_PUBLIC_API_BASE_URL`을 `https://your-domain.com/api/v1`로 변경
+- 카카오/네이버/구글/페이스북 각 개발자 콘솔에 새 `redirect_uri`(`https://프런트도메인/oauth/callback/{provider}`) 등록
+  (대부분 소셜 로그인은 프로덕션에서 `https://`만 허용하고 `http://`는 localhost 예외 외엔 거부합니다)
+
+### 참고
+- 책등 이미지는 기본값(`STORAGE_MODE=local`)이면 `uploads-data` 볼륨에 저장되어 `docker compose down`/재시작에도 유지됩니다.
+  다만 EC2 인스턴스 자체를 지우면 함께 사라지므로, 나중에 여유 생기면 `STORAGE_MODE=r2`(또는 AWS S3)로 옮기는 걸 추천합니다.
+- MySQL도 같은 EC2 인스턴스 안에서 컨테이너로 도는 구조라 별도 RDS 비용이 없습니다. 트래픽이 늘어나면 그때 RDS 분리를 고려하면 됩니다.
