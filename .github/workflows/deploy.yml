@@ -10,9 +10,6 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    outputs:
-      image: ${{ steps.build.outputs.image }}
-      registry: ${{ steps.ecr-login.outputs.registry }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,7 +39,6 @@ jobs:
             .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: build-and-push
@@ -56,12 +52,21 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           # EC2 인스턴스에 ECR pull 권한이 있는 IAM 역할이 붙어있어야
           # 별도 AWS 자격증명 저장 없이 aws ecr get-login-password가 동작한다.
+          #
+          # ECR 주소(계정 ID 포함)를 build 잡의 output으로 넘기면 GitHub가
+          # secret으로 마스킹해 빈 값이 되고, 그러면 compose가 로컬 빌드로 폴백해
+          # EC2에서 느린 빌드가 돌아버린다. 그래서 EC2에서 IAM 역할로 계정 ID를
+          # 직접 조회해 ECR 주소를 재구성한다.
           script: |
+            set -e
             cd ~/booktalk-backend
             git pull origin main
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-              | docker login --username AWS --password-stdin ${{ needs.build-and-push.outputs.registry }}
-            export ECR_REPOSITORY_URI="${{ needs.build-and-push.outputs.image }}"
+            REGION=${{ secrets.AWS_REGION }}
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+            aws ecr get-login-password --region "$REGION" \
+              | docker login --username AWS --password-stdin "$REGISTRY"
+            export ECR_REPOSITORY_URI="${REGISTRY}/${{ env.ECR_REPOSITORY }}:latest"
             docker compose pull app
             docker compose up -d
             docker image prune -f
