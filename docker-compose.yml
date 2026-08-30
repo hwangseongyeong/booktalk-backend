@@ -15,6 +15,11 @@ services:
       MYSQL_USER: booktalk
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    # [테스트 전용] 외부(로컬 GUI 등)에서 접속하려고 3306을 호스트에 노출한다.
+    # 보안그룹은 반드시 "내 IP"로만 제한할 것. 테스트가 끝나면 이 ports 블록을 제거해
+    # DB를 다시 내부 네트워크에만 두는 것을 권장한다.
+    ports:
+      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
