@@ -64,12 +64,19 @@
 ## API (Phase 1 - 코어 MVP)
 모든 응답은 `{ success, data, message }` 형태로 감싸져 내려갑니다.
 
-### 인증
+### 인증 / 사용자
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
 | POST | `/api/v1/auth/{provider}/login` | - | 소셜 로그인. provider: `kakao`\|`naver`\|`google`\|`facebook` |
 | POST | `/api/v1/auth/refresh` | - | refreshToken으로 토큰 재발급 |
 | GET | `/api/v1/auth/me` | O | 내 정보 조회 |
+| GET | `/api/v1/users/me` | O | 내 정보 조회 (auth/me와 동일 응답) |
+| PATCH | `/api/v1/users/me` | O | 닉네임/프로필 수정. `nickname`(2~12자, 필수), `profileImageUrl`, `profileColor`(`#RRGGBB`) — 전달된 필드만 반영 |
+| POST | `/api/v1/users/me/onboarding/complete` | O | 온보딩(닉네임→프로필→친구초대) 완료 처리 |
+
+사용자 응답(`UserProfileResponse`): `id, email, nickname, profileImageUrl, profileColor, oauthProvider, onboardingCompleted`.
+`onboardingCompleted=false`면 프런트가 로그인 후 온보딩 화면으로 보냅니다. 온보딩 완료 이후에는 소셜 로그인 시
+제공자 프로필로 닉네임/이미지를 덮어쓰지 않습니다.
 
 ### 도서 / 독서 기록 / 서재
 | 메서드 | 경로 | 인증 | 설명 |

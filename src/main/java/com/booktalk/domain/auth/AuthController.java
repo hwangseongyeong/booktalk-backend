@@ -3,7 +3,7 @@ package com.booktalk.domain.auth;
 import com.booktalk.domain.auth.dto.OAuthLoginRequest;
 import com.booktalk.domain.auth.dto.RefreshTokenRequest;
 import com.booktalk.domain.auth.dto.TokenResponse;
-import com.booktalk.domain.auth.dto.UserResponse;
+import com.booktalk.domain.user.dto.UserProfileResponse;
 import com.booktalk.global.common.ApiResponse;
 import com.booktalk.global.security.CurrentUserResolver;
 import jakarta.validation.Valid;
@@ -43,8 +43,8 @@ public class AuthController {
 
     /** 현재 로그인한 사용자 정보 */
     @GetMapping("/me")
-    public ApiResponse<UserResponse> me() {
-        return ApiResponse.success(UserResponse.from(currentUserResolver.getCurrentUser()));
+    public ApiResponse<UserProfileResponse> me() {
+        return ApiResponse.success(UserProfileResponse.from(currentUserResolver.getCurrentUser()));
     }
 
     private OAuthProvider parseProvider(String provider) {

@@ -4,7 +4,7 @@ import com.booktalk.domain.auth.client.OAuthClient;
 import com.booktalk.domain.auth.dto.OAuthLoginRequest;
 import com.booktalk.domain.auth.dto.RefreshTokenRequest;
 import com.booktalk.domain.auth.dto.TokenResponse;
-import com.booktalk.domain.auth.dto.UserResponse;
+import com.booktalk.domain.user.dto.UserProfileResponse;
 import com.booktalk.domain.user.User;
 import com.booktalk.domain.user.UserRepository;
 import com.booktalk.global.security.JwtTokenProvider;
@@ -48,13 +48,16 @@ public class AuthService {
     private TokenResponse issueTokens(User user) {
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-        return new TokenResponse(accessToken, refreshToken, UserResponse.from(user));
+        return new TokenResponse(accessToken, refreshToken, UserProfileResponse.from(user));
     }
 
     private User findOrCreateUser(OAuthUserInfo info) {
         return userRepository.findByOauthProviderAndProviderId(info.provider().name(), info.providerId())
                 .map(existing -> {
-                    existing.updateProfile(info.nickname(), info.profileImageUrl());
+                    // 온보딩을 마친 사용자는 본인이 정한 닉네임/프로필을 유지한다.
+                    if (!existing.isOnboardingCompleted()) {
+                        existing.syncOAuthProfile(info.nickname(), info.profileImageUrl());
+                    }
                     return existing;
                 })
                 .orElseGet(() -> userRepository.save(User.builder()
