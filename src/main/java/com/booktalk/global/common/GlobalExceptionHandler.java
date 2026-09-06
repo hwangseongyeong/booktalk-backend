@@ -4,6 +4,7 @@ import com.booktalk.global.security.InvalidTokenException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -29,6 +30,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
+    }
+
+    /** 본문 JSON이 깨졌거나(인코딩 불일치 등) 형식이 맞지 않는 경우. 클라이언트 오류이므로 400. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException e) {
+        log.warn("요청 본문을 읽을 수 없음: {}", e.getMostSpecificCause().getMessage());
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error("요청 본문 형식이 올바르지 않습니다. JSON 형식과 UTF-8 인코딩을 확인해주세요."));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
