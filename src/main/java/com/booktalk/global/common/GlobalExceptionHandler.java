@@ -8,6 +8,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * MVP 단계 최소 수준의 전역 예외 처리.
@@ -47,6 +48,14 @@ public class GlobalExceptionHandler {
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .orElse("잘못된 요청입니다.");
         return ResponseEntity.badRequest().body(ApiResponse.error(message));
+    }
+
+    /** 존재하지 않는 경로 요청. 서버 오류가 아니므로 500이 아닌 404로 응답한다. */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException e) {
+        log.warn("존재하지 않는 리소스 요청: {}", e.getResourcePath());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("요청하신 경로를 찾을 수 없습니다."));
     }
 
     @ExceptionHandler(Exception.class)
