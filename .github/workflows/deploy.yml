@@ -67,6 +67,10 @@ jobs:
             aws ecr get-login-password --region "$REGION" \
               | docker login --username AWS --password-stdin "$REGISTRY"
             export ECR_REPOSITORY_URI="${REGISTRY}/${{ env.ECR_REPOSITORY }}:latest"
+            # URI가 비면 즉시 중단(compose가 오래된 로컬 이미지로 폴백하는 사고 방지).
+            : "${ECR_REPOSITORY_URI:?ECR_REPOSITORY_URI 가 비었습니다 - 배포 중단}"
             docker compose pull app
-            docker compose up -d
+            # :latest 태그는 이미지가 바뀌어도 up -d가 컨테이너를 재생성하지 않을 수 있어
+            # --force-recreate 로 항상 새 이미지로 교체되게 한다.
+            docker compose up -d --force-recreate app
             docker image prune -f

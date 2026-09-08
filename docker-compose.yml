@@ -31,9 +31,12 @@ services:
   app:
     # ECR_REPOSITORY_URI에는 태그까지 포함된 전체 이미지 경로가 들어간다
     # (예: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/booktalk-backend:latest).
-    # CI/CD가 배포 시 이 값을 export해서 넘겨주고, 없으면 로컬 빌드용 기본 태그를 쓴다.
-    image: ${ECR_REPOSITORY_URI:-booktalk-backend:latest}
-    build: .
+    # CI/CD가 배포 시 이 값을 반드시 export해서 넘겨준다.
+    #
+    # 주의: 예전엔 여기에 build/기본값 폴백이 있었는데, 배포 중 이 값이 비면
+    # docker compose가 조용히 오래된 로컬 이미지로 폴백해 신규 코드가 반영 안 되는
+    # 사고가 있었다(온보딩 API 미반영). 폴백을 없애 값이 비면 배포가 즉시 실패하도록 한다.
+    image: ${ECR_REPOSITORY_URI:?ECR_REPOSITORY_URI 가 비었습니다 - 배포 스크립트에서 export 필요}
     restart: unless-stopped
     depends_on:
       mysql:
