@@ -29,6 +29,10 @@ public class ReadingRecordService {
         Book book = bookRepository.findById(request.bookId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 책입니다. id=" + request.bookId()));
 
+        if (readingRecordRepository.existsByUserAndBook(user, book)) {
+            throw new IllegalStateException("이미 등록된 독서 기록이 있습니다. bookId=" + request.bookId());
+        }
+
         ReadingRecord record = ReadingRecord.builder()
                 .user(user)
                 .book(book)

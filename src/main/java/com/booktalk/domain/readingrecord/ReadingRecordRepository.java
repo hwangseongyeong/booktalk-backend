@@ -1,5 +1,6 @@
 package com.booktalk.domain.readingrecord;
 
+import com.booktalk.domain.book.Book;
 import com.booktalk.domain.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -7,6 +8,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface ReadingRecordRepository extends JpaRepository<ReadingRecord, Long> {
+
+    boolean existsByUserAndBook(User user, Book book);
 
     List<ReadingRecord> findByUserOrderByIdDesc(User user);
 
