@@ -54,18 +54,50 @@ public class SpineAssetService {
         if (book.getCoverImageUrl() == null || book.getCoverImageUrl().isBlank()) {
             return null;
         }
+        // 카카오 썸네일 프록시(search*.kakaocdn.net/thumb/...?fname=원본)는 서버 IP를 차단하는 경우가 있어,
+        // fname의 원본 이미지 URL을 우선 시도하고, 실패하면 원래 URL로 폴백한다.
+        String primaryUrl = resolveOriginalUrl(book.getCoverImageUrl());
+        byte[] bytes = tryFetch(book, primaryUrl);
+        if (bytes == null && !primaryUrl.equals(book.getCoverImageUrl())) {
+            bytes = tryFetch(book, book.getCoverImageUrl());
+        }
+        return bytes;
+    }
+
+    private byte[] tryFetch(Book book, String url) {
         try {
             byte[] bytes = restClient.get()
-                    .uri(book.getCoverImageUrl())
-                    .header("Referer", refererOf(book.getCoverImageUrl()))
+                    .uri(url)
+                    .header("Referer", refererOf(url))
                     .retrieve()
                     .body(byte[].class);
             return (bytes != null && bytes.length > 0) ? bytes : null;
         } catch (Exception e) {
-            log.warn("표지 이미지 조회 실패 (bookId={}, coverImageUrl={}): {}",
-                    book.getId(), book.getCoverImageUrl(), e.getMessage());
+            log.warn("표지 이미지 조회 실패 (bookId={}, url={}): {}", book.getId(), url, e.getMessage());
             return null;
         }
+    }
+
+    /** 카카오 썸네일 URL이면 fname 파라미터의 원본 이미지 URL을 반환한다. 아니면 원래 URL 그대로. */
+    private String resolveOriginalUrl(String coverImageUrl) {
+        try {
+            URI uri = URI.create(coverImageUrl);
+            String query = uri.getQuery();
+            if (query != null && query.contains("fname=")) {
+                for (String param : query.split("&")) {
+                    if (param.startsWith("fname=")) {
+                        String fname = java.net.URLDecoder.decode(
+                                param.substring("fname=".length()), StandardCharsets.UTF_8);
+                        if (fname.startsWith("http")) {
+                            return fname;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("원본 표지 URL 추출 실패, 원래 URL 사용: {}", e.getMessage());
+        }
+        return coverImageUrl;
     }
 
     /** 표지 URL의 origin(scheme://host)을 Referer로 사용한다. 핫링크 차단 우회에 도움. */
