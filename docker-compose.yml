@@ -77,6 +77,9 @@ services:
       S3_REGION: ${S3_REGION:-}
       S3_BUCKET: ${S3_BUCKET:-}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
+
+      # 책등 일괄 재생성 관리자 엔드포인트 토큰. 비워두면 해당 API는 항상 403(비활성).
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
     volumes:
       - uploads-data:/app/uploads
     expose:
