@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll() // 책등 이미지(로컬 저장 모드) 공개 접근
+                        .requestMatchers("/api/v1/admin/**").permitAll() // 인가는 컨트롤러의 X-Admin-Token으로 처리
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
