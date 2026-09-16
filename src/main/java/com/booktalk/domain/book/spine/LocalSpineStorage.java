@@ -26,16 +26,15 @@ public class LocalSpineStorage implements SpineStorage {
     @Override
     public String upload(Long bookId, byte[] svgContent) {
         try {
-            Path dir = Path.of(properties.uploadDir(), "spines");
-            Files.createDirectories(dir);
-
-            Path file = dir.resolve(bookId + ".svg");
+            String key = SpineObjectKey.forBook(bookId); // 예: spines/012/345/12345.svg
+            Path file = Path.of(properties.uploadDir(), key);
+            Files.createDirectories(file.getParent());
             Files.write(file, svgContent);
 
             String base = properties.publicBaseUrl().endsWith("/")
                     ? properties.publicBaseUrl().substring(0, properties.publicBaseUrl().length() - 1)
                     : properties.publicBaseUrl();
-            return base + "/spines/" + bookId + ".svg";
+            return base + "/" + key;
         } catch (IOException e) {
             log.warn("로컬 책등 이미지 저장 실패 (bookId={}): {}", bookId, e.getMessage());
             return null;

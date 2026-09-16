@@ -67,11 +67,16 @@ services:
       OAUTH2_FACEBOOK_CLIENT_SECRET: ${OAUTH2_FACEBOOK_CLIENT_SECRET}
       OAUTH2_FACEBOOK_REDIRECT_URI: ${OAUTH2_FACEBOOK_REDIRECT_URI}
 
-      # 책등 이미지: 우선 로컬 저장(볼륨으로 유지). 나중에 S3/R2로 전환하려면
-      # STORAGE_MODE=r2 로 바꾸고 R2_* 환경변수를 추가하면 된다.
-      STORAGE_MODE: local
+      # 책등 이미지 저장 방식은 .env의 STORAGE_MODE로 선택한다 (local | s3 | r2).
+      STORAGE_MODE: ${STORAGE_MODE:-local}
+      # STORAGE_MODE=local 일 때만 사용 (S3 사용 시 무시됨)
       STORAGE_LOCAL_UPLOAD_DIR: /app/uploads
       STORAGE_LOCAL_PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}/uploads
+      # STORAGE_MODE=s3 일 때 사용. 자격증명은 EC2 인스턴스 IAM Role로 처리하므로
+      # access-key/secret-key는 넘기지 않는다(앱이 기본 자격증명 체인으로 자동 사용).
+      S3_REGION: ${S3_REGION:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
     volumes:
       - uploads-data:/app/uploads
     expose:

@@ -2,6 +2,7 @@ package com.booktalk.domain.readingrecord;
 
 import com.booktalk.domain.book.Book;
 import com.booktalk.domain.book.BookRepository;
+import com.booktalk.domain.book.spine.SpineAssetService;
 import com.booktalk.domain.readingrecord.dto.ReadingRecordCompleteRequest;
 import com.booktalk.domain.readingrecord.dto.ReadingRecordResponse;
 import com.booktalk.domain.readingrecord.dto.ReadingRecordStartRequest;
@@ -22,6 +23,7 @@ public class ReadingRecordService {
     private final ReadingRecordRepository readingRecordRepository;
     private final BookRepository bookRepository;
     private final CurrentUserResolver currentUserResolver;
+    private final SpineAssetService spineAssetService;
 
     @Transactional
     public ReadingRecordResponse start(ReadingRecordStartRequest request) {
@@ -31,6 +33,12 @@ public class ReadingRecordService {
 
         if (readingRecordRepository.existsByUserAndBook(user, book)) {
             throw new IllegalStateException("이미 등록된 독서 기록이 있습니다. bookId=" + request.bookId());
+        }
+
+        // 읽기 시작 시점에 책등이 아직 없으면 생성한다. (등록 시 생성 실패했거나 과거 데이터 대비)
+        // 책등은 책당 1회만 생성 — 이미 있으면 재생성하지 않는다.
+        if (book.getSpineImageUrl() == null) {
+            spineAssetService.generateAndAttach(book);
         }
 
         ReadingRecord record = ReadingRecord.builder()
