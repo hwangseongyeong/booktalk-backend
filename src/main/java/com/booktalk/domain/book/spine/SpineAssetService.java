@@ -7,6 +7,7 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 
@@ -23,12 +24,19 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class SpineAssetService {
 
+    // 일부 CDN(카카오 등)은 기본 HTTP 클라이언트 User-Agent를 봇으로 보고 403을 준다.
+    // 브라우저처럼 보이는 User-Agent를 기본 헤더로 붙인다.
+    private static final String BROWSER_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                    + "Chrome/120.0.0.0 Safari/537.36";
+
     private final SpineStorage spineStorage;
 
     // 표지 이미지 URL이 리다이렉트(301/302)하는 경우도 있어 리다이렉트를 따라가도록 설정한다.
     private final RestClient restClient = RestClient.builder()
             .requestFactory(new JdkClientHttpRequestFactory(
                     HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()))
+            .defaultHeader("User-Agent", BROWSER_USER_AGENT)
             .build();
 
     public void generateAndAttach(Book book) {
@@ -49,6 +57,7 @@ public class SpineAssetService {
         try {
             byte[] bytes = restClient.get()
                     .uri(book.getCoverImageUrl())
+                    .header("Referer", refererOf(book.getCoverImageUrl()))
                     .retrieve()
                     .body(byte[].class);
             return (bytes != null && bytes.length > 0) ? bytes : null;
@@ -56,6 +65,16 @@ public class SpineAssetService {
             log.warn("표지 이미지 조회 실패 (bookId={}, coverImageUrl={}): {}",
                     book.getId(), book.getCoverImageUrl(), e.getMessage());
             return null;
+        }
+    }
+
+    /** 표지 URL의 origin(scheme://host)을 Referer로 사용한다. 핫링크 차단 우회에 도움. */
+    private String refererOf(String coverImageUrl) {
+        try {
+            URI uri = URI.create(coverImageUrl);
+            return uri.getScheme() + "://" + uri.getHost() + "/";
+        } catch (Exception e) {
+            return coverImageUrl;
         }
     }
 
