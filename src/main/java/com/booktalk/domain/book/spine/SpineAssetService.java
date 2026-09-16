@@ -3,9 +3,11 @@ package com.booktalk.domain.book.spine;
 import com.booktalk.domain.book.Book;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -22,33 +24,62 @@ import java.nio.charset.StandardCharsets;
 public class SpineAssetService {
 
     private final SpineStorage spineStorage;
-    private final RestClient restClient = RestClient.create();
+
+    // 표지 이미지 URL이 리다이렉트(301/302)하는 경우도 있어 리다이렉트를 따라가도록 설정한다.
+    private final RestClient restClient = RestClient.builder()
+            .requestFactory(new JdkClientHttpRequestFactory(
+                    HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()))
+            .build();
 
     public void generateAndAttach(Book book) {
-        ImageColorExtractor.ExtractedColors colors = extractColors(book);
+        byte[] coverBytes = fetchCoverBytes(book);
+        ImageColorExtractor.ExtractedColors colors = extractColors(coverBytes, book.getTitle());
 
-        String svg = SpineSvgBuilder.build(book.getTitle(), colors.primaryColor(), colors.accentColor());
+        String svg = buildSvg(book.getTitle(), coverBytes, colors);
         String spineImageUrl = spineStorage.upload(book.getId(), svg.getBytes(StandardCharsets.UTF_8));
 
         book.updateSpineAssets(spineImageUrl, colors.primaryColor(), colors.accentColor());
     }
 
-    private ImageColorExtractor.ExtractedColors extractColors(Book book) {
-        if (book.getCoverImageUrl() != null && !book.getCoverImageUrl().isBlank()) {
-            try {
-                byte[] imageBytes = restClient.get()
-                        .uri(book.getCoverImageUrl())
-                        .retrieve()
-                        .body(byte[].class);
+    /** 표지 이미지를 1회 내려받는다. 색상 추출과 책등 배경에 함께 사용. 실패 시 null. */
+    private byte[] fetchCoverBytes(Book book) {
+        if (book.getCoverImageUrl() == null || book.getCoverImageUrl().isBlank()) {
+            return null;
+        }
+        try {
+            byte[] bytes = restClient.get()
+                    .uri(book.getCoverImageUrl())
+                    .retrieve()
+                    .body(byte[].class);
+            return (bytes != null && bytes.length > 0) ? bytes : null;
+        } catch (Exception e) {
+            log.warn("표지 이미지 조회 실패 (bookId={}, coverImageUrl={}): {}",
+                    book.getId(), book.getCoverImageUrl(), e.getMessage());
+            return null;
+        }
+    }
 
-                if (imageBytes != null && imageBytes.length > 0) {
-                    return ImageColorExtractor.extract(imageBytes);
-                }
+    private ImageColorExtractor.ExtractedColors extractColors(byte[] coverBytes, String title) {
+        if (coverBytes != null) {
+            try {
+                return ImageColorExtractor.extract(coverBytes);
             } catch (Exception e) {
-                log.warn("표지 이미지 색상 추출 실패 (bookId={}, coverImageUrl={}): {}",
-                        book.getId(), book.getCoverImageUrl(), e.getMessage());
+                log.warn("표지 색상 추출 실패, 폴백 팔레트 사용: {}", e.getMessage());
             }
         }
-        return FallbackPalette.pick(book.getTitle());
+        return FallbackPalette.pick(title);
+    }
+
+    /** 표지가 있으면 표지 세로 슬라이스 책등, 없거나 실패하면 색상 기반 책등으로 폴백. */
+    private String buildSvg(String title, byte[] coverBytes, ImageColorExtractor.ExtractedColors colors) {
+        if (coverBytes != null) {
+            try {
+                String coverDataUri = CoverImageEncoder.toSpineSliceDataUri(coverBytes);
+                return SpineSvgBuilder.buildFromCover(title, coverDataUri);
+            } catch (Exception e) {
+                log.warn("표지 기반 책등 생성 실패, 색상 기반으로 폴백: {}", e.getMessage());
+            }
+        }
+        return SpineSvgBuilder.buildFromColors(title, colors.primaryColor(), colors.accentColor());
     }
 }
