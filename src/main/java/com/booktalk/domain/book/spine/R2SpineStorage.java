@@ -26,7 +26,7 @@ public class R2SpineStorage implements SpineStorage {
         }
 
         try {
-            String key = "spines/" + bookId + ".svg";
+            String key = SpineObjectKey.forBook(bookId);
             return r2Client.upload(key, svgContent, "image/svg+xml");
         } catch (Exception e) {
             log.warn("R2 책등 이미지 업로드 실패 (bookId={}): {}", bookId, e.getMessage());
