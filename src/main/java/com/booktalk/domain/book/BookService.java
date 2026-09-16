@@ -5,7 +5,6 @@ import com.booktalk.domain.book.dto.BookResponse;
 import com.booktalk.domain.book.dto.BookSearchResultResponse;
 import com.booktalk.domain.book.external.ExternalBookInfo;
 import com.booktalk.domain.book.external.KakaoBookClient;
-import com.booktalk.domain.book.spine.SpineAssetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,12 +24,11 @@ public class BookService {
 
     private final BookRepository bookRepository;
     private final KakaoBookClient kakaoBookClient;
-    private final SpineAssetService spineAssetService;
 
     /**
      * 도서 등록. ISBN이 이미 등록되어 있으면 새로 만들지 않고 기존 책을 반환한다(중복 등록 방지).
      * 카카오 검색 결과를 등록할 때도 이 API를 그대로 사용한다.
-     * 등록 시 표지 이미지에서 대표색을 뽑아 책등 SVG를 생성한다(실패해도 등록은 진행됨).
+     * 책등 SVG는 등록 시점이 아니라 사용자가 처음 읽기 시작할 때(독서 기록 생성) 생성된다.
      */
     @Transactional
     public BookResponse register(BookRegisterRequest request) {
@@ -50,8 +48,7 @@ public class BookService {
                 .pageCount(request.pageCount())
                 .build();
 
-        bookRepository.save(book); // ID 채번 (책등 이미지 저장 키로 사용)
-        spineAssetService.generateAndAttach(book); // 영속 상태 엔티티 필드만 갱신, 트랜잭션 커밋 시 자동 반영
+        bookRepository.save(book);
 
         return BookResponse.from(book);
     }
