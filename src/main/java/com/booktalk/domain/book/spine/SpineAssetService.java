@@ -39,8 +39,20 @@ public class SpineAssetService {
             .defaultHeader("User-Agent", BROWSER_USER_AGENT)
             .build();
 
+    /** 서버가 표지 URL을 직접 내려받아 책등을 생성한다. */
     public void generateAndAttach(Book book) {
-        byte[] coverBytes = fetchCoverBytes(book);
+        attach(book, fetchCoverBytes(book));
+    }
+
+    /**
+     * 외부에서 전달받은 표지 이미지 바이트로 책등을 생성한다.
+     * 네이티브 앱 등 서버가 직접 표지를 못 받는 경우(카카오 CDN의 서버 IP 차단) 클라이언트가 대신 올려준다.
+     */
+    public void generateAndAttachFromImage(Book book, byte[] coverBytes) {
+        attach(book, coverBytes);
+    }
+
+    private void attach(Book book, byte[] coverBytes) {
         ImageColorExtractor.ExtractedColors colors = extractColors(coverBytes, book.getTitle());
 
         String svg = buildSvg(book.getTitle(), coverBytes, colors);
