@@ -14,8 +14,8 @@ public final class SpineSvgBuilder {
     private static final int HEIGHT = 320;
     private static final int STRIPE_HEIGHT = 10;
     private static final int TITLE_MAX_LENGTH = 22;
-    private static final int TITLE_FONT_SIZE = 12;
-    private static final int TITLE_LINE_HEIGHT = 11;
+    private static final int TITLE_FONT_SIZE = 14;
+    private static final int TITLE_LINE_HEIGHT = 13;
 
     private SpineSvgBuilder() {
     }
