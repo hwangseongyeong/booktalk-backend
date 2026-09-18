@@ -53,7 +53,7 @@ public class SpineAssetService {
         byte[] coverBytes = fetchCoverBytes(book);
         ImageColorExtractor.ExtractedColors colors = extractColors(coverBytes, book.getTitle());
 
-        String svg = buildSvg(book.getTitle(), coverBytes, colors);
+        String svg = buildSvg(book, colors);
         String spineImageUrl = spineStorage.upload(book.getId(), svg.getBytes(StandardCharsets.UTF_8));
 
         book.updateSpineAssets(spineImageUrl, colors.primaryColor(), colors.accentColor());
@@ -160,16 +160,13 @@ public class SpineAssetService {
         return FallbackPalette.pick(title);
     }
 
-    /** 표지가 있으면 표지 세로 슬라이스 책등, 없거나 실패하면 색상 기반 책등으로 폴백. */
-    private String buildSvg(String title, byte[] coverBytes, ImageColorExtractor.ExtractedColors colors) {
-        if (coverBytes != null) {
-            try {
-                String coverDataUri = CoverImageEncoder.toSpineSliceDataUri(coverBytes);
-                return SpineSvgBuilder.buildFromCover(title, coverDataUri);
-            } catch (Exception e) {
-                log.warn("표지 기반 책등 생성 실패, 색상 기반으로 폴백: {}", e.getMessage());
-            }
-        }
-        return SpineSvgBuilder.buildFromColors(title, colors.primaryColor(), colors.accentColor());
+    /**
+     * 색상 기반으로 책등을 그린다. 저해상도 표지를 세로로 잘라 배경에 깔면 뿌옇게 뭉개져
+     * 품질이 낮으므로, 표지는 색상 추출에만 쓰고 책등 이미지는 색상 기반으로 새로 그린다.
+     */
+    private String buildSvg(Book book, ImageColorExtractor.ExtractedColors colors) {
+        return SpineSvgBuilder.buildFromColors(
+                book.getTitle(), book.getAuthor(), book.getPublisher(),
+                colors.primaryColor(), colors.accentColor());
     }
 }
