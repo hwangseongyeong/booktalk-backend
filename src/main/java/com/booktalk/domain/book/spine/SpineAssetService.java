@@ -3,11 +3,13 @@ package com.booktalk.domain.book.spine;
 import com.booktalk.domain.book.Book;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 
@@ -32,6 +34,14 @@ public class SpineAssetService {
 
     private final SpineStorage spineStorage;
 
+    // 표지 프록시(Cloudflare Worker) 설정. 비어 있으면 프록시 없이 직접 조회.
+    // 카카오 CDN이 서버(AWS) IP를 차단하므로, 설정 시 비-AWS IP인 프록시 경유로 표지를 받는다.
+    @Value("${cover-proxy.base-url:}")
+    private String coverProxyBaseUrl;
+
+    @Value("${cover-proxy.token:}")
+    private String coverProxyToken;
+
     // 표지 이미지 URL이 리다이렉트(301/302)하는 경우도 있어 리다이렉트를 따라가도록 설정한다.
     private final RestClient restClient = RestClient.builder()
             .requestFactory(new JdkClientHttpRequestFactory(
@@ -54,14 +64,43 @@ public class SpineAssetService {
         if (book.getCoverImageUrl() == null || book.getCoverImageUrl().isBlank()) {
             return null;
         }
-        // 카카오 썸네일 프록시(search*.kakaocdn.net/thumb/...?fname=원본)는 서버 IP를 차단하는 경우가 있어,
-        // fname의 원본 이미지 URL을 우선 시도하고, 실패하면 원래 URL로 폴백한다.
-        String primaryUrl = resolveOriginalUrl(book.getCoverImageUrl());
+        String coverUrl = book.getCoverImageUrl();
+
+        // 1) 프록시(Cloudflare Worker)가 설정돼 있으면 우선 프록시 경유로 조회 (서버 IP 차단 우회)
+        if (coverProxyBaseUrl != null && !coverProxyBaseUrl.isBlank()) {
+            byte[] viaProxy = tryFetchViaProxy(book, coverUrl);
+            if (viaProxy != null) {
+                return viaProxy;
+            }
+        }
+
+        // 2) 직접 조회. 카카오 썸네일 URL이면 fname 원본을 우선 시도하고, 실패 시 원래 URL로 폴백.
+        String primaryUrl = resolveOriginalUrl(coverUrl);
         byte[] bytes = tryFetch(book, primaryUrl);
-        if (bytes == null && !primaryUrl.equals(book.getCoverImageUrl())) {
-            bytes = tryFetch(book, book.getCoverImageUrl());
+        if (bytes == null && !primaryUrl.equals(coverUrl)) {
+            bytes = tryFetch(book, coverUrl);
         }
         return bytes;
+    }
+
+    /** Cloudflare Worker 프록시 경유로 표지 이미지를 받는다. 비-AWS IP라 카카오 IP 차단을 우회한다. */
+    private byte[] tryFetchViaProxy(Book book, String coverUrl) {
+        try {
+            String proxyUrl = coverProxyBaseUrl
+                    + (coverProxyBaseUrl.contains("?") ? "&" : "?")
+                    + "url=" + URLEncoder.encode(coverUrl, StandardCharsets.UTF_8);
+
+            // URI.create로 넘겨 RestClient의 URI 템플릿 재인코딩(이중 인코딩)을 막는다.
+            RestClient.RequestHeadersSpec<?> spec = restClient.get().uri(URI.create(proxyUrl));
+            if (coverProxyToken != null && !coverProxyToken.isBlank()) {
+                spec = spec.header("X-Proxy-Token", coverProxyToken);
+            }
+            byte[] bytes = spec.retrieve().body(byte[].class);
+            return (bytes != null && bytes.length > 0) ? bytes : null;
+        } catch (Exception e) {
+            log.warn("표지 프록시 조회 실패 (bookId={}): {}", book.getId(), e.getMessage());
+            return null;
+        }
     }
 
     private byte[] tryFetch(Book book, String url) {

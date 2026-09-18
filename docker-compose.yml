@@ -80,6 +80,11 @@ services:
 
       # 책등 일괄 재생성 관리자 엔드포인트 토큰. 비워두면 해당 API는 항상 403(비활성).
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
+
+      # 표지 이미지 프록시(Cloudflare Worker). 카카오 CDN의 서버 IP 차단 우회용.
+      # 비워두면 프록시 없이 직접 조회(카카오 표지는 색상 폴백).
+      COVER_PROXY_BASE_URL: ${COVER_PROXY_BASE_URL:-}
+      COVER_PROXY_TOKEN: ${COVER_PROXY_TOKEN:-}
     volumes:
       - uploads-data:/app/uploads
     expose:
