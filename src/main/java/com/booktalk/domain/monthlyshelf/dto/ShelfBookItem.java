@@ -4,6 +4,7 @@ import com.booktalk.domain.book.Book;
 import com.booktalk.domain.readingrecord.ReadingRecord;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record ShelfBookItem(
         Long readingRecordId,
@@ -14,7 +15,8 @@ public record ShelfBookItem(
         String primaryColor,
         LocalDate endDate,
         Double rating,
-        String oneLineNote
+        String oneLineNote,
+        List<String> myWords
 ) {
     public static ShelfBookItem from(ReadingRecord record) {
         Book book = record.getBook();
@@ -27,7 +29,8 @@ public record ShelfBookItem(
                 book.getPrimaryColor(),
                 record.getEndDate(),
                 record.getRating(),
-                record.getOneLineNote()
+                record.getOneLineNote(),
+                record.getMyWords()
         );
     }
 }

@@ -58,7 +58,8 @@ public class ReadingRecordService {
         record.completeReading(
                 request.endDate() != null ? request.endDate() : LocalDate.now(),
                 request.rating(),
-                request.oneLineNote()
+                request.oneLineNote(),
+                request.myWords()
         );
 
         return ReadingRecordResponse.from(record);

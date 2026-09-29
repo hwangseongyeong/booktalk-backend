@@ -4,6 +4,7 @@ import com.booktalk.domain.book.dto.BookResponse;
 import com.booktalk.domain.readingrecord.ReadingRecord;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record ReadingRecordResponse(
         Long id,
@@ -12,7 +13,8 @@ public record ReadingRecordResponse(
         LocalDate startDate,
         LocalDate endDate,
         Double rating,
-        String oneLineNote
+        String oneLineNote,
+        List<String> myWords
 ) {
     public static ReadingRecordResponse from(ReadingRecord record) {
         return new ReadingRecordResponse(
@@ -22,7 +24,8 @@ public record ReadingRecordResponse(
                 record.getStartDate(),
                 record.getEndDate(),
                 record.getRating(),
-                record.getOneLineNote()
+                record.getOneLineNote(),
+                record.getMyWords()
         );
     }
 }
