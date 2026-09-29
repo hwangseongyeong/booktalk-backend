@@ -66,6 +66,19 @@ public class User {
 		}
 	}
 
+	/**
+	 * DB에 값이 비어 있는(널/공백) 필드만 소셜 제공자 값으로 채운다.
+	 * 온보딩을 마쳐 본인이 정한 프로필을 유지해야 하는 사용자라도, 애초에 값이 없던 항목은 다음 로그인 때 보충한다.
+	 */
+	public void fillMissingOAuthProfile(String nickname, String profileImageUrl) {
+		if ((this.nickname == null || this.nickname.isBlank()) && nickname != null && !nickname.isBlank()) {
+			this.nickname = nickname;
+		}
+		if ((this.profileImageUrl == null || this.profileImageUrl.isBlank()) && profileImageUrl != null && !profileImageUrl.isBlank()) {
+			this.profileImageUrl = profileImageUrl;
+		}
+	}
+
 	/** 온보딩/프로필 수정 화면에서 사용자가 직접 바꾸는 값. 전달된(널이 아닌) 필드만 반영한다. */
 	public void editProfile(String nickname, String profileImageUrl, String profileColor) {
 		if (nickname != null && !nickname.isBlank()) {

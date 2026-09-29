@@ -54,9 +54,12 @@ public class AuthService {
     private User findOrCreateUser(OAuthUserInfo info) {
         return userRepository.findByOauthProviderAndProviderId(info.provider().name(), info.providerId())
                 .map(existing -> {
-                    // 온보딩을 마친 사용자는 본인이 정한 닉네임/프로필을 유지한다.
                     if (!existing.isOnboardingCompleted()) {
+                        // 온보딩 전에는 소셜 제공자의 최신 프로필로 갱신한다.
                         existing.syncOAuthProfile(info.nickname(), info.profileImageUrl());
+                    } else {
+                        // 온보딩을 마친 사용자는 본인이 정한 값을 유지하되, DB에 없던 항목만 다음 로그인 때 채운다.
+                        existing.fillMissingOAuthProfile(info.nickname(), info.profileImageUrl());
                     }
                     return existing;
                 })
