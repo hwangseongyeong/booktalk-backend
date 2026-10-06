@@ -35,6 +35,7 @@ public class MeetingService {
 				.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 책입니다. id=" + request.bookId()));
 
 		Meeting.ReadingMode mode = parseReadingMode(request.readingMode());
+		Meeting.Visibility visibility = parseVisibility(request.visibility());
 
 		int capacity = request.capacity() != null ? request.capacity() : DEFAULT_CAPACITY;
 		if (capacity < 1) {
@@ -49,6 +50,7 @@ public class MeetingService {
 				.book(book)
 				.name(request.name().strip())
 				.readingMode(mode)
+				.visibility(visibility)
 				.capacity(capacity)
 				.recruitDeadline(deadline)
 				.build();
@@ -63,13 +65,13 @@ public class MeetingService {
 		return MeetingResponse.from(saved, host);
 	}
 
-	/** 전체 모임 목록. status=RECRUITING|ONGOING|CLOSED 필터, 생략/ALL이면 전체. */
+	/** 공개 모임 목록. 비공개(PRIVATE) 모임은 숨긴다. status=RECRUITING|ONGOING|CLOSED 필터, 생략/ALL이면 전체. */
 	public List<MeetingResponse> getMeetings(String status) {
 		User me = currentUserResolver.getCurrentUser();
 
 		List<Meeting> meetings = (status == null || status.isBlank() || status.equalsIgnoreCase("ALL"))
-				? meetingRepository.findAllByOrderByIdDesc()
-				: meetingRepository.findByStatusOrderByIdDesc(parseStatus(status));
+				? meetingRepository.findByVisibilityOrderByIdDesc(Meeting.Visibility.PUBLIC)
+				: meetingRepository.findByVisibilityAndStatusOrderByIdDesc(Meeting.Visibility.PUBLIC, parseStatus(status));
 
 		return meetings.stream()
 				.map(meeting -> MeetingResponse.from(meeting, me))
@@ -98,12 +100,29 @@ public class MeetingService {
 		return MeetingDetailResponse.from(meeting, me);
 	}
 
-	/** 초대 토큰으로 모임 참여. 유효한 토큰 링크로만 참여할 수 있다(비공개). */
+	/** 공개 모임 직접 참여. 비공개(PRIVATE) 모임은 초대 토큰으로만 참여할 수 있다. */
+	@Transactional
+	public MeetingResponse join(Long id) {
+		User me = currentUserResolver.getCurrentUser();
+		Meeting meeting = getMeetingOrThrow(id);
+
+		if (!meeting.isPublic()) {
+			throw new IllegalStateException("초대 링크로만 참여할 수 있는 모임입니다.");
+		}
+
+		return addMember(meeting, me);
+	}
+
+	/** 초대 토큰으로 모임 참여. 공개/비공개 모두 가능하다(유효한 토큰 링크 필요). */
 	@Transactional
 	public MeetingResponse joinByInviteToken(String token) {
 		User me = currentUserResolver.getCurrentUser();
 		Meeting meeting = getMeetingByTokenOrThrow(token);
+		return addMember(meeting, me);
+	}
 
+	/** 참여 가능 여부를 검증하고 멤버로 추가한다. */
+	private MeetingResponse addMember(Meeting meeting, User me) {
 		if (meeting.getStatus() == Meeting.MeetingStatus.CLOSED) {
 			throw new IllegalStateException("종료된 모임입니다.");
 		}
@@ -213,6 +232,18 @@ public class MeetingService {
 			return Meeting.MeetingStatus.valueOf(value.toUpperCase());
 		} catch (IllegalArgumentException | NullPointerException e) {
 			throw new IllegalArgumentException("status는 RECRUITING, ONGOING, CLOSED, ALL 중 하나여야 합니다.");
+		}
+	}
+
+	/** 공개 범위. 생략 시 PUBLIC(공개). */
+	private Meeting.Visibility parseVisibility(String value) {
+		if (value == null || value.isBlank()) {
+			return Meeting.Visibility.PUBLIC;
+		}
+		try {
+			return Meeting.Visibility.valueOf(value.toUpperCase());
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("visibility는 PUBLIC 또는 PRIVATE 여야 합니다.");
 		}
 	}
 }

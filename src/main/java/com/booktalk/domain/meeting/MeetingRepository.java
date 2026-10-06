@@ -7,9 +7,9 @@ import java.util.Optional;
 
 public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 
-	List<Meeting> findAllByOrderByIdDesc();
+	List<Meeting> findByVisibilityOrderByIdDesc(Meeting.Visibility visibility);
 
-	List<Meeting> findByStatusOrderByIdDesc(Meeting.MeetingStatus status);
+	List<Meeting> findByVisibilityAndStatusOrderByIdDesc(Meeting.Visibility visibility, Meeting.MeetingStatus status);
 
 	Optional<Meeting> findByInviteToken(String inviteToken);
 }

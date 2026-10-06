@@ -145,6 +145,39 @@ class MeetingServiceTest {
 				.hasMessageContaining("유효하지 않은 초대 링크");
 	}
 
+	@Test
+	@DisplayName("공개 모임은 초대 없이 직접 참여할 수 있다")
+	void join_public_meeting_directly() {
+		User invitee = userWithId(3L, "참여자");
+		given(currentUserResolver.getCurrentUser()).willReturn(invitee);
+		given(meetingRepository.findById(10L)).willReturn(Optional.of(meeting)); // setUp 모임은 기본 PUBLIC
+		given(meetingMemberRepository.existsByMeetingAndUser(meeting, invitee)).willReturn(false);
+
+		meetingService.join(10L);
+
+		assertThat(meeting.getMembers()).anyMatch(m -> m.getUser().getId().equals(3L));
+		verify(meetingMemberRepository).save(any(MeetingMember.class));
+	}
+
+	@Test
+	@DisplayName("비공개 모임은 직접 참여할 수 없다(초대 링크 필요)")
+	void cannot_join_private_meeting_directly() {
+		Meeting privateMeeting = Meeting.builder()
+				.host(host)
+				.book(Book.builder().title("비공개 책").build())
+				.name("비공개 모임")
+				.readingMode(Meeting.ReadingMode.SOLO)
+				.visibility(Meeting.Visibility.PRIVATE)
+				.capacity(6)
+				.build();
+		given(currentUserResolver.getCurrentUser()).willReturn(member);
+		given(meetingRepository.findById(20L)).willReturn(Optional.of(privateMeeting));
+
+		assertThatThrownBy(() -> meetingService.join(20L))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("초대 링크로만");
+	}
+
 	private User userWithId(Long id, String nickname) {
 		User user = User.builder()
 				.nickname(nickname)

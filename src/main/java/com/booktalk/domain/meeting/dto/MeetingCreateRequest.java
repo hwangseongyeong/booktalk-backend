@@ -15,6 +15,7 @@ public record MeetingCreateRequest(
 		@NotBlank(message = "읽는 방식(readingMode)은 필수입니다.") String readingMode, // TOGETHER | SOLO
 		@NotNull(message = "bookId는 필수입니다.") Long bookId,
 		@NotBlank(message = "모임 이름은 필수입니다.") String name,
+		String visibility,         // PUBLIC | PRIVATE, 생략 시 PUBLIC(공개)
 		Integer capacity,          // 생략 시 기본 정원
 		LocalDate recruitDeadline  // 생략 시 오늘 + 기본 모집기간
 ) {

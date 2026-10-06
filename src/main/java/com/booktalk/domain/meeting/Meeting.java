@@ -47,6 +47,10 @@ public class Meeting {
 	@Column(nullable = false, length = 20)
 	private MeetingStatus status; // RECRUITING, ONGOING, CLOSED
 
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private Visibility visibility; // PUBLIC(목록 노출+직접 참여), PRIVATE(목록 숨김+초대 토큰으로만 참여)
+
 	@Column(nullable = false)
 	private int capacity; // 정원
 
@@ -65,11 +69,13 @@ public class Meeting {
 	private List<MeetingMember> members = new ArrayList<>();
 
 	@Builder
-	public Meeting(User host, Book book, String name, ReadingMode readingMode, int capacity, LocalDate recruitDeadline) {
+	public Meeting(User host, Book book, String name, ReadingMode readingMode, Visibility visibility,
+			int capacity, LocalDate recruitDeadline) {
 		this.host = host;
 		this.book = book;
 		this.name = name;
 		this.readingMode = readingMode;
+		this.visibility = visibility != null ? visibility : Visibility.PUBLIC;
 		this.status = MeetingStatus.RECRUITING;
 		this.capacity = capacity;
 		this.recruitDeadline = recruitDeadline;
@@ -104,6 +110,11 @@ public class Meeting {
 		return this.host.getId().equals(user.getId());
 	}
 
+	/** 공개 모임인지(목록 노출 + 초대 없이 직접 참여 가능). */
+	public boolean isPublic() {
+		return this.visibility == Visibility.PUBLIC;
+	}
+
 	/** 초대 토큰 재발급(host만). 기존 초대 링크는 즉시 무효화된다. */
 	public void reissueInviteToken() {
 		this.inviteToken = generateInviteToken();
@@ -119,5 +130,9 @@ public class Meeting {
 
 	public enum MeetingStatus {
 		RECRUITING, ONGOING, CLOSED
+	}
+
+	public enum Visibility {
+		PUBLIC, PRIVATE
 	}
 }

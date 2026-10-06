@@ -48,6 +48,12 @@ public class MeetingController {
 		return ApiResponse.success(meetingService.getMeeting(id));
 	}
 
+	/** 공개 모임 직접 참여(비공개 모임은 초대 토큰 필요) */
+	@PostMapping("/{id}/join")
+	public ApiResponse<MeetingResponse> join(@PathVariable Long id) {
+		return ApiResponse.success(meetingService.join(id));
+	}
+
 	/** 초대 토큰으로 모임 미리보기(참여 수락 화면용) */
 	@GetMapping("/invite/{token}")
 	public ApiResponse<MeetingDetailResponse> getByInviteToken(@PathVariable String token) {
