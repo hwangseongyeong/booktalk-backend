@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * 독서 모임(소통). 한 권의 책을 함께/각자 읽는 모임.
- * 생성자(host)는 생성 시 선택한 역할(리더/멤버)로 첫 멤버가 된다.
+ * 생성자(host)가 첫 멤버가 되며, 역할 구분 없이 모두 멤버다. 모임 종료/시작은 host만 할 수 있다.
  */
 @Entity
 @Table(name = "meetings")
@@ -83,14 +83,19 @@ public class Meeting {
 		return this.members.size() >= this.capacity;
 	}
 
-	/** 모집 → 진행 중으로 전환(리더만). */
+	/** 모집 → 진행 중으로 전환(host만). */
 	public void start() {
 		this.status = MeetingStatus.ONGOING;
 	}
 
-	/** 모임 종료(리더만). 모집 중이든 진행 중이든 종료할 수 있다. */
+	/** 모임 종료(host만). 모집 중이든 진행 중이든 종료할 수 있다. */
 	public void close() {
 		this.status = MeetingStatus.CLOSED;
+	}
+
+	/** 주어진 사용자가 이 모임의 생성자(host)인지. */
+	public boolean isHostedBy(User user) {
+		return this.host.getId().equals(user.getId());
 	}
 
 	public enum ReadingMode {

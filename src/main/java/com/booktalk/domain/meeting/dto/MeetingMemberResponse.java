@@ -10,7 +10,6 @@ public record MeetingMemberResponse(
 		String nickname,
 		String profileImageUrl,
 		String profileColor,
-		String role,
 		LocalDateTime joinedAt
 ) {
 	public static MeetingMemberResponse from(MeetingMember member) {
@@ -20,7 +19,6 @@ public record MeetingMemberResponse(
 				user.getNickname(),
 				user.getProfileImageUrl(),
 				user.getProfileColor(),
-				member.getRole().name(),
 				member.getJoinedAt()
 		);
 	}

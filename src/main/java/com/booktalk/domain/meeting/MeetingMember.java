@@ -36,27 +36,13 @@ public class MeetingMember {
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 20)
-	private MemberRole role; // LEADER, MEMBER
-
 	@Column(nullable = false)
 	private LocalDateTime joinedAt;
 
 	@Builder
-	public MeetingMember(Meeting meeting, User user, MemberRole role) {
+	public MeetingMember(Meeting meeting, User user) {
 		this.meeting = meeting;
 		this.user = user;
-		this.role = role;
 		this.joinedAt = LocalDateTime.now();
-	}
-
-	/** 역할 변경(리더 위임 등). */
-	public void changeRole(MemberRole role) {
-		this.role = role;
-	}
-
-	public enum MemberRole {
-		LEADER, MEMBER
 	}
 }
