@@ -12,6 +12,7 @@ import java.util.List;
 /**
  * 모임 상세 응답. 요약 정보에 참여자 목록을 더한다.
  * isHost/joined 의미는 MeetingResponse 와 같다.
+ * inviteToken: 비공개 초대 링크 토큰. 참여자(멤버)에게만 내려주고, 비참여자에게는 null(노출 방지).
  */
 public record MeetingDetailResponse(
 		Long id,
@@ -25,6 +26,7 @@ public record MeetingDetailResponse(
 		BookResponse book,
 		boolean isHost,
 		boolean joined,
+		String inviteToken,
 		LocalDateTime createdAt,
 		List<MeetingMemberResponse> members
 ) {
@@ -53,6 +55,7 @@ public record MeetingDetailResponse(
 				BookResponse.from(meeting.getBook()),
 				isHost,
 				joined,
+				joined ? meeting.getInviteToken() : null,
 				meeting.getCreatedAt(),
 				members
 		);

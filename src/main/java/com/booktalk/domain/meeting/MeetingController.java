@@ -48,10 +48,22 @@ public class MeetingController {
 		return ApiResponse.success(meetingService.getMeeting(id));
 	}
 
-	/** 모임 참여 */
-	@PostMapping("/{id}/join")
-	public ApiResponse<MeetingResponse> join(@PathVariable Long id) {
-		return ApiResponse.success(meetingService.join(id));
+	/** 초대 토큰으로 모임 미리보기(참여 수락 화면용) */
+	@GetMapping("/invite/{token}")
+	public ApiResponse<MeetingDetailResponse> getByInviteToken(@PathVariable String token) {
+		return ApiResponse.success(meetingService.getByInviteToken(token));
+	}
+
+	/** 초대 토큰으로 모임 참여(비공개: 토큰 링크로만 참여 가능) */
+	@PostMapping("/invite/{token}/join")
+	public ApiResponse<MeetingResponse> joinByInviteToken(@PathVariable String token) {
+		return ApiResponse.success(meetingService.joinByInviteToken(token));
+	}
+
+	/** 초대 링크 재발급(생성자) */
+	@PostMapping("/{id}/invite/reissue")
+	public ApiResponse<MeetingDetailResponse> reissueInviteToken(@PathVariable Long id) {
+		return ApiResponse.success(meetingService.reissueInviteToken(id));
 	}
 
 	/** 모임 나가기 */

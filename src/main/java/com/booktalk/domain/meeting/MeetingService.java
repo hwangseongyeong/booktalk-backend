@@ -91,11 +91,18 @@ public class MeetingService {
 		return MeetingDetailResponse.from(meeting, me);
 	}
 
-	/** 모임 참여. */
-	@Transactional
-	public MeetingResponse join(Long id) {
+	/** 초대 토큰으로 모임 미리보기(참여 전 수락 화면용). */
+	public MeetingDetailResponse getByInviteToken(String token) {
 		User me = currentUserResolver.getCurrentUser();
-		Meeting meeting = getMeetingOrThrow(id);
+		Meeting meeting = getMeetingByTokenOrThrow(token);
+		return MeetingDetailResponse.from(meeting, me);
+	}
+
+	/** 초대 토큰으로 모임 참여. 유효한 토큰 링크로만 참여할 수 있다(비공개). */
+	@Transactional
+	public MeetingResponse joinByInviteToken(String token) {
+		User me = currentUserResolver.getCurrentUser();
+		Meeting meeting = getMeetingByTokenOrThrow(token);
 
 		if (meeting.getStatus() == Meeting.MeetingStatus.CLOSED) {
 			throw new IllegalStateException("종료된 모임입니다.");
@@ -115,6 +122,20 @@ public class MeetingService {
 		meetingMemberRepository.save(member);
 
 		return MeetingResponse.from(meeting, me);
+	}
+
+	/** 초대 토큰 재발급(host만). 기존 초대 링크는 즉시 무효화된다. */
+	@Transactional
+	public MeetingDetailResponse reissueInviteToken(Long id) {
+		User me = currentUserResolver.getCurrentUser();
+		Meeting meeting = getMeetingOrThrow(id);
+
+		if (!meeting.isHostedBy(me)) {
+			throw new IllegalStateException("모임 생성자만 초대 링크를 재발급할 수 있습니다.");
+		}
+
+		meeting.reissueInviteToken();
+		return MeetingDetailResponse.from(meeting, me);
 	}
 
 	/** 모임 나가기. 생성자(host)는 나갈 수 없다(모임을 종료해야 함). */
@@ -172,6 +193,11 @@ public class MeetingService {
 	private Meeting getMeetingOrThrow(Long id) {
 		return meetingRepository.findById(id)
 				.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 모임입니다. id=" + id));
+	}
+
+	private Meeting getMeetingByTokenOrThrow(String token) {
+		return meetingRepository.findByInviteToken(token)
+				.orElseThrow(() -> new IllegalArgumentException("유효하지 않은 초대 링크입니다."));
 	}
 
 	private Meeting.ReadingMode parseReadingMode(String value) {

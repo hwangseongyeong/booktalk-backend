@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -117,6 +118,31 @@ class MeetingServiceTest {
 		assertThat(closed.status()).isEqualTo("CLOSED");
 		assertThat(closed.isHost()).isTrue();
 		assertThat(closed.joined()).isTrue();
+	}
+
+	@Test
+	@DisplayName("유효한 초대 토큰으로 모임에 참여할 수 있다")
+	void join_by_invite_token() {
+		User invitee = userWithId(3L, "초대받은사람");
+		given(currentUserResolver.getCurrentUser()).willReturn(invitee);
+		given(meetingRepository.findByInviteToken("tok")).willReturn(Optional.of(meeting));
+		given(meetingMemberRepository.existsByMeetingAndUser(meeting, invitee)).willReturn(false);
+
+		meetingService.joinByInviteToken("tok");
+
+		assertThat(meeting.getMembers()).anyMatch(m -> m.getUser().getId().equals(3L));
+		verify(meetingMemberRepository).save(any(MeetingMember.class));
+	}
+
+	@Test
+	@DisplayName("유효하지 않은 초대 토큰은 참여에 실패한다")
+	void join_by_invalid_token() {
+		given(currentUserResolver.getCurrentUser()).willReturn(member);
+		given(meetingRepository.findByInviteToken("bad")).willReturn(Optional.empty());
+
+		assertThatThrownBy(() -> meetingService.joinByInviteToken("bad"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("유효하지 않은 초대 링크");
 	}
 
 	private User userWithId(Long id, String nickname) {
