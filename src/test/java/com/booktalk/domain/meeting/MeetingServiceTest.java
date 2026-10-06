@@ -178,6 +178,28 @@ class MeetingServiceTest {
 				.hasMessageContaining("초대 링크로만");
 	}
 
+	@Test
+	@DisplayName("생성자는 모임을 비공개로 전환할 수 있다")
+	void host_can_change_visibility_to_private() {
+		given(currentUserResolver.getCurrentUser()).willReturn(host);
+		given(meetingRepository.findById(10L)).willReturn(Optional.of(meeting));
+
+		meetingService.changeVisibility(10L, "PRIVATE");
+
+		assertThat(meeting.isPublic()).isFalse();
+	}
+
+	@Test
+	@DisplayName("생성자가 아니면 공개 범위를 변경할 수 없다")
+	void non_host_cannot_change_visibility() {
+		given(currentUserResolver.getCurrentUser()).willReturn(member);
+		given(meetingRepository.findById(10L)).willReturn(Optional.of(meeting));
+
+		assertThatThrownBy(() -> meetingService.changeVisibility(10L, "PRIVATE"))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("생성자만 공개 범위를 변경");
+	}
+
 	private User userWithId(Long id, String nickname) {
 		User user = User.builder()
 				.nickname(nickname)

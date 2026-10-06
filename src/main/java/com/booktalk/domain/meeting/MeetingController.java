@@ -3,11 +3,13 @@ package com.booktalk.domain.meeting;
 import com.booktalk.domain.meeting.dto.MeetingCreateRequest;
 import com.booktalk.domain.meeting.dto.MeetingDetailResponse;
 import com.booktalk.domain.meeting.dto.MeetingResponse;
+import com.booktalk.domain.meeting.dto.MeetingVisibilityRequest;
 import com.booktalk.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -64,6 +66,13 @@ public class MeetingController {
 	@PostMapping("/invite/{token}/join")
 	public ApiResponse<MeetingResponse> joinByInviteToken(@PathVariable String token) {
 		return ApiResponse.success(meetingService.joinByInviteToken(token));
+	}
+
+	/** 공개 범위 변경(생성자) */
+	@PatchMapping("/{id}/visibility")
+	public ApiResponse<MeetingDetailResponse> changeVisibility(@PathVariable Long id,
+			@Valid @RequestBody MeetingVisibilityRequest request) {
+		return ApiResponse.success(meetingService.changeVisibility(id, request.visibility()));
 	}
 
 	/** 초대 링크 재발급(생성자) */

@@ -143,6 +143,20 @@ public class MeetingService {
 		return MeetingResponse.from(meeting, me);
 	}
 
+	/** 공개 범위 전환(host만). 비공개로 바꾸면 목록에서 숨겨지고 초대 토큰으로만 참여할 수 있다. */
+	@Transactional
+	public MeetingDetailResponse changeVisibility(Long id, String visibility) {
+		User me = currentUserResolver.getCurrentUser();
+		Meeting meeting = getMeetingOrThrow(id);
+
+		if (!meeting.isHostedBy(me)) {
+			throw new IllegalStateException("모임 생성자만 공개 범위를 변경할 수 있습니다.");
+		}
+
+		meeting.changeVisibility(parseVisibility(visibility));
+		return MeetingDetailResponse.from(meeting, me);
+	}
+
 	/** 초대 토큰 재발급(host만). 기존 초대 링크는 즉시 무효화된다. */
 	@Transactional
 	public MeetingDetailResponse reissueInviteToken(Long id) {

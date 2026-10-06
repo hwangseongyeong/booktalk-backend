@@ -115,6 +115,11 @@ public class Meeting {
 		return this.visibility == Visibility.PUBLIC;
 	}
 
+	/** 공개 범위 전환(host만). */
+	public void changeVisibility(Visibility visibility) {
+		this.visibility = visibility;
+	}
+
 	/** 초대 토큰 재발급(host만). 기존 초대 링크는 즉시 무효화된다. */
 	public void reissueInviteToken() {
 		this.inviteToken = generateInviteToken();
