@@ -1,6 +1,7 @@
 package com.booktalk.domain.meeting;
 
 import com.booktalk.domain.meeting.dto.MeetingCreateRequest;
+import com.booktalk.domain.meeting.dto.MeetingDelegateRequest;
 import com.booktalk.domain.meeting.dto.MeetingDetailResponse;
 import com.booktalk.domain.meeting.dto.MeetingResponse;
 import com.booktalk.global.common.ApiResponse;
@@ -71,5 +72,12 @@ public class MeetingController {
 	@PostMapping("/{id}/close")
 	public ApiResponse<MeetingResponse> close(@PathVariable Long id) {
 		return ApiResponse.success(meetingService.close(id));
+	}
+
+	/** 리더 위임(리더 → 다른 멤버) */
+	@PostMapping("/{id}/delegate")
+	public ApiResponse<MeetingResponse> delegate(@PathVariable Long id,
+			@Valid @RequestBody MeetingDelegateRequest request) {
+		return ApiResponse.success(meetingService.delegate(id, request.targetUserId()));
 	}
 }

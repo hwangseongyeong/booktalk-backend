@@ -174,6 +174,32 @@ public class MeetingService {
 		return MeetingResponse.from(meeting, role);
 	}
 
+	/** 리더 위임. 현재 리더는 MEMBER로, 대상 멤버는 LEADER로 바뀐다. */
+	@Transactional
+	public MeetingResponse delegate(Long id, Long targetUserId) {
+		User me = currentUserResolver.getCurrentUser();
+		Meeting meeting = getMeetingOrThrow(id);
+
+		MeetingMember leader = meetingMemberRepository.findByMeetingAndUser(meeting, me)
+				.orElseThrow(() -> new IllegalStateException("참여하지 않은 모임입니다."));
+		if (leader.getRole() != MeetingMember.MemberRole.LEADER) {
+			throw new IllegalStateException("모임 리더만 리더를 위임할 수 있습니다.");
+		}
+		if (me.getId().equals(targetUserId)) {
+			throw new IllegalArgumentException("자기 자신에게는 위임할 수 없습니다.");
+		}
+
+		MeetingMember target = meeting.getMembers().stream()
+				.filter(m -> m.getUser().getId().equals(targetUserId))
+				.findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("위임 대상이 모임 참여자가 아닙니다. userId=" + targetUserId));
+
+		leader.changeRole(MeetingMember.MemberRole.MEMBER);
+		target.changeRole(MeetingMember.MemberRole.LEADER);
+
+		return MeetingResponse.from(meeting, MeetingMember.MemberRole.MEMBER);
+	}
+
 	// ---------- 내부 헬퍼 ----------
 	private Meeting getMeetingOrThrow(Long id) {
 		return meetingRepository.findById(id)

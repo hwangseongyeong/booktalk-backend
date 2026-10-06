@@ -51,6 +51,11 @@ public class MeetingMember {
 		this.joinedAt = LocalDateTime.now();
 	}
 
+	/** 역할 변경(리더 위임 등). */
+	public void changeRole(MemberRole role) {
+		this.role = role;
+	}
+
 	public enum MemberRole {
 		LEADER, MEMBER
 	}
