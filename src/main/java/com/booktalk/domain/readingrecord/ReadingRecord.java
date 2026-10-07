@@ -66,6 +66,12 @@ public class ReadingRecord {
 		this.startDate = startDate;
 	}
 
+	/** 읽고 싶은 책(WISHLIST) → 읽는 중(READING)으로 전환. */
+	public void startReading(LocalDate startDate) {
+		this.status = ReadingStatus.READING;
+		this.startDate = startDate;
+	}
+
 	public void completeReading(LocalDate endDate, Double rating, String oneLineNote,
 			String emotion, String mood, String genre, String readAmount) {
 		this.status = ReadingStatus.COMPLETED;
@@ -85,6 +91,6 @@ public class ReadingRecord {
 	}
 
 	public enum ReadingStatus {
-		READING, COMPLETED
+		WISHLIST, READING, COMPLETED
 	}
 }

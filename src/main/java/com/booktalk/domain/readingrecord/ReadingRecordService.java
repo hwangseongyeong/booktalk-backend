@@ -51,6 +51,44 @@ public class ReadingRecordService {
         return ReadingRecordResponse.from(readingRecordRepository.save(record));
     }
 
+    /** 읽고 싶은 책 담기. 아직 읽기 시작/완독하지 않은 상태(WISHLIST)로 등록한다. */
+    @Transactional
+    public ReadingRecordResponse addToWishlist(ReadingRecordStartRequest request) {
+        User user = currentUserResolver.getCurrentUser();
+        Book book = bookRepository.findById(request.bookId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 책입니다. id=" + request.bookId()));
+
+        if (readingRecordRepository.existsByUserAndBook(user, book)) {
+            throw new IllegalStateException("이미 담아두었거나 읽고 있는 책입니다. bookId=" + request.bookId());
+        }
+
+        ReadingRecord record = ReadingRecord.builder()
+                .user(user)
+                .book(book)
+                .status(ReadingRecord.ReadingStatus.WISHLIST)
+                .build();
+
+        return ReadingRecordResponse.from(readingRecordRepository.save(record));
+    }
+
+    /** 읽고 싶은 책(WISHLIST)을 읽기 시작(READING)으로 전환한다. */
+    @Transactional
+    public ReadingRecordResponse startReading(Long id) {
+        ReadingRecord record = getOwnedRecord(id);
+
+        if (record.getStatus() != ReadingRecord.ReadingStatus.WISHLIST) {
+            throw new IllegalStateException("읽고 싶은 책만 읽기 시작할 수 있습니다.");
+        }
+
+        // 읽기 시작 시점에 책등이 없으면 생성한다.
+        if (record.getBook().getSpineImageUrl() == null) {
+            spineAssetService.generateAndAttach(record.getBook());
+        }
+
+        record.startReading(LocalDate.now());
+        return ReadingRecordResponse.from(record);
+    }
+
     @Transactional
     public ReadingRecordResponse complete(Long id, ReadingRecordCompleteRequest request) {
         ReadingRecord record = getOwnedRecord(id);

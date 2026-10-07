@@ -30,6 +30,18 @@ public class ReadingRecordController {
         return ApiResponse.success(readingRecordService.start(request));
     }
 
+    /** 읽고 싶은 책 담기(WISHLIST로 등록) */
+    @PostMapping("/wishlist")
+    public ApiResponse<ReadingRecordResponse> addToWishlist(@Valid @RequestBody ReadingRecordStartRequest request) {
+        return ApiResponse.success(readingRecordService.addToWishlist(request));
+    }
+
+    /** 읽고 싶은 책 → 읽기 시작(READING) 전환 */
+    @PatchMapping("/{id}/start")
+    public ApiResponse<ReadingRecordResponse> startReading(@PathVariable Long id) {
+        return ApiResponse.success(readingRecordService.startReading(id));
+    }
+
     /** 완독 처리(별점/한줄메모 포함) */
     @PatchMapping("/{id}/complete")
     public ApiResponse<ReadingRecordResponse> complete(
