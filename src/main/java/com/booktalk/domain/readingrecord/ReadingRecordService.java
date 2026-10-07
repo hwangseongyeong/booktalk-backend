@@ -59,7 +59,10 @@ public class ReadingRecordService {
                 request.endDate() != null ? request.endDate() : LocalDate.now(),
                 request.rating(),
                 request.oneLineNote(),
-                request.myWords()
+                request.emotion(),
+                request.mood(),
+                request.genre(),
+                request.readAmount()
         );
 
         return ReadingRecordResponse.from(record);

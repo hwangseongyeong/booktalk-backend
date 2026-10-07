@@ -14,7 +14,11 @@ public record ReadingRecordResponse(
         LocalDate endDate,
         Double rating,
         String oneLineNote,
-        List<String> myWords
+        List<String> myWords,
+        String emotion,
+        String mood,
+        String genre,
+        String readAmount
 ) {
     public static ReadingRecordResponse from(ReadingRecord record) {
         return new ReadingRecordResponse(
@@ -25,7 +29,11 @@ public record ReadingRecordResponse(
                 record.getEndDate(),
                 record.getRating(),
                 record.getOneLineNote(),
-                record.getMyWords()
+                record.getMyWords(),
+                record.getEmotion(),
+                record.getMood(),
+                record.getGenre(),
+                record.getReadAmount()
         );
     }
 }

@@ -44,7 +44,16 @@ public class ReadingRecord {
 	@Column(length = 500)
 	private String oneLineNote;
 
-	// 완독 시 선택한 My Words 키워드(최대 3개). 콤마 구분 문자열로 단일 컬럼에 저장한다.
+	// 완독 시 선택한 '나의 단어' — 감정/분위기/장르에서 각각 하나씩.
+	private String emotion;   // 감정 (예: 따뜻한)
+	private String mood;      // 분위기 (예: 매혹적인)
+	private String genre;     // 장르 (예: 시)
+
+	// 완독량. ALL(전체 읽었어요) / PARTIAL(일부 읽었어요)
+	@Column(name = "read_amount", length = 20)
+	private String readAmount;
+
+	// 나의 단어(감정+분위기+장르)를 평면 목록으로도 보관한다. 서재/홈/북박스 표시에 재사용.
 	@Convert(converter = StringListConverter.class)
 	@Column(name = "my_words", length = 255)
 	private List<String> myWords = new ArrayList<>();
@@ -57,12 +66,22 @@ public class ReadingRecord {
 		this.startDate = startDate;
 	}
 
-	public void completeReading(LocalDate endDate, Double rating, String oneLineNote, List<String> myWords) {
+	public void completeReading(LocalDate endDate, Double rating, String oneLineNote,
+			String emotion, String mood, String genre, String readAmount) {
 		this.status = ReadingStatus.COMPLETED;
 		this.endDate = endDate;
 		this.rating = rating;
 		this.oneLineNote = oneLineNote;
-		this.myWords = (myWords != null) ? myWords : new ArrayList<>();
+		this.emotion = emotion;
+		this.mood = mood;
+		this.genre = genre;
+		this.readAmount = readAmount;
+
+		List<String> words = new ArrayList<>();
+		if (emotion != null && !emotion.isBlank()) words.add(emotion);
+		if (mood != null && !mood.isBlank()) words.add(mood);
+		if (genre != null && !genre.isBlank()) words.add(genre);
+		this.myWords = words;
 	}
 
 	public enum ReadingStatus {
