@@ -97,9 +97,9 @@ public class ReadingRecordService {
                 request.endDate() != null ? request.endDate() : LocalDate.now(),
                 request.rating(),
                 request.oneLineNote(),
-                request.emotion(),
-                request.mood(),
-                request.genre(),
+                request.emotions(),
+                request.moods(),
+                request.genres(),
                 request.readAmount()
         );
 

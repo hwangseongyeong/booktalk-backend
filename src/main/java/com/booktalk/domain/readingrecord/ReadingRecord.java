@@ -44,10 +44,18 @@ public class ReadingRecord {
 	@Column(length = 500)
 	private String oneLineNote;
 
-	// 완독 시 선택한 '나의 단어' — 감정/분위기/장르에서 각각 하나씩.
-	private String emotion;   // 감정 (예: 따뜻한)
-	private String mood;      // 분위기 (예: 매혹적인)
-	private String genre;     // 장르 (예: 시)
+	// 완독 시 선택한 '나의 단어' — 감정/분위기/장르에서 각각 최대 3개. 콤마 구분 문자열로 저장.
+	@Convert(converter = StringListConverter.class)
+	@Column(length = 255)
+	private List<String> emotions = new ArrayList<>();   // 감정 (예: 따뜻한, 벅찬)
+
+	@Convert(converter = StringListConverter.class)
+	@Column(length = 255)
+	private List<String> moods = new ArrayList<>();      // 분위기 (예: 매혹적인)
+
+	@Convert(converter = StringListConverter.class)
+	@Column(length = 255)
+	private List<String> genres = new ArrayList<>();     // 장르 (예: 시)
 
 	// 완독량. ALL(전체 읽었어요) / PARTIAL(일부 읽었어요)
 	@Column(name = "read_amount", length = 20)
@@ -73,20 +81,20 @@ public class ReadingRecord {
 	}
 
 	public void completeReading(LocalDate endDate, Double rating, String oneLineNote,
-			String emotion, String mood, String genre, String readAmount) {
+			List<String> emotions, List<String> moods, List<String> genres, String readAmount) {
 		this.status = ReadingStatus.COMPLETED;
 		this.endDate = endDate;
 		this.rating = rating;
 		this.oneLineNote = oneLineNote;
-		this.emotion = emotion;
-		this.mood = mood;
-		this.genre = genre;
+		this.emotions = (emotions != null) ? emotions : new ArrayList<>();
+		this.moods = (moods != null) ? moods : new ArrayList<>();
+		this.genres = (genres != null) ? genres : new ArrayList<>();
 		this.readAmount = readAmount;
 
 		List<String> words = new ArrayList<>();
-		if (emotion != null && !emotion.isBlank()) words.add(emotion);
-		if (mood != null && !mood.isBlank()) words.add(mood);
-		if (genre != null && !genre.isBlank()) words.add(genre);
+		words.addAll(this.emotions);
+		words.addAll(this.moods);
+		words.addAll(this.genres);
 		this.myWords = words;
 	}
 

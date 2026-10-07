@@ -15,9 +15,9 @@ public record ReadingRecordResponse(
         Double rating,
         String oneLineNote,
         List<String> myWords,
-        String emotion,
-        String mood,
-        String genre,
+        List<String> emotions,
+        List<String> moods,
+        List<String> genres,
         String readAmount
 ) {
     public static ReadingRecordResponse from(ReadingRecord record) {
@@ -30,9 +30,9 @@ public record ReadingRecordResponse(
                 record.getRating(),
                 record.getOneLineNote(),
                 record.getMyWords(),
-                record.getEmotion(),
-                record.getMood(),
-                record.getGenre(),
+                record.getEmotions(),
+                record.getMoods(),
+                record.getGenres(),
                 record.getReadAmount()
         );
     }
