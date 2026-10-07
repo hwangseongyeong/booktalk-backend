@@ -27,6 +27,7 @@ public record MeetingDetailResponse(
 		BookResponse book,
 		boolean isHost,
 		boolean joined,
+		String hostNickname,
 		String inviteToken,
 		LocalDateTime createdAt,
 		List<MeetingMemberResponse> members
@@ -57,6 +58,7 @@ public record MeetingDetailResponse(
 				BookResponse.from(meeting.getBook()),
 				isHost,
 				joined,
+				meeting.getHost().getNickname(),
 				joined ? meeting.getInviteToken() : null,
 				meeting.getCreatedAt(),
 				members
