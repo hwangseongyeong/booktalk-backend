@@ -25,7 +25,8 @@ public record ShelfBookItem(
                 book.getId(),
                 book.getTitle(),
                 book.getAuthor(),
-                book.getSpineImageUrl(),
+                // 책등은 저장하지 않고 실시간 렌더 — 실시간 엔드포인트 경로를 내려준다.
+                "/api/v1/books/" + book.getId() + "/spine.svg",
                 book.getPrimaryColor(),
                 record.getEndDate(),
                 record.getRating(),

@@ -23,7 +23,8 @@ public record BookResponse(
                 book.getPublisher(),
                 book.getCoverImageUrl(),
                 book.getPageCount(),
-                book.getSpineImageUrl(),
+                // 책등은 저장하지 않고 실시간 렌더하므로, 저장된 URL 대신 실시간 엔드포인트 경로를 내려준다.
+                "/api/v1/books/" + book.getId() + "/spine.svg",
                 book.getPrimaryColor(),
                 book.getAccentColor()
         );

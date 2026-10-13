@@ -1,16 +1,19 @@
 package com.booktalk.domain.book.spine;
 
 /**
- * 실제 책등처럼 보이는 세로형 SVG를 생성한다.
+ * 바탕화면(월페이퍼) 느낌의 세로형 SVG 책등을 생성한다.
  *
  * 저해상도(카카오 120px 썸네일) 표지를 세로로 잘라 배경에 깔면 뿌옇게 뭉개져 품질이 낮으므로,
- * 표지는 색상 추출에만 쓰고 책등은 색상 기반으로 새로 그린다(virtual-bookshelf 류 오픈소스 방식).
+ * 표지는 색상 추출에만 쓰고 책등은 색상 기반으로 새로 그린다.
+ *
+ * 실제 양장본처럼 보이게 하는 장치(조명 sweep·헤드밴드·밑줄 프레이밍)는 쓰지 않고,
+ * 추출한 두 색을 부드럽게 섞은 그라데이션 배경으로 '바탕화면 이미지' 같은 결을 낸다.
  *
  * 구성:
- * - 배경: primary 색 + 세로 조명 그라데이션(한쪽 하이라이트/반대쪽 그림자)으로 입체감
- * - 상/하단 accent 헤드밴드(실제 양장본 느낌)
- * - 제목: 책등 중앙을 채우는 히어로 텍스트(정자 세로쓰기), accent 밑줄로 프레이밍
+ * - 배경: primary → 중간 혼합색 → accent 로 이어지는 대각 소프트 그라데이션 + 은은한 상단 글로우
+ * - 제목: 책등 중앙을 채우는 히어로 텍스트(정자 세로쓰기)
  * - 저자: 제목 아래 / 출판사: 테일(맨 아래)에 고정
+ * - 그라데이션 위에서도 읽히도록 모든 글자에 부드러운 그림자(halo)
  *
  * 모든 글자는 회전 없이 똑바로 세운 세로쓰기(정자)이며, 길이에 따라 겹치지 않게 자동 축약한다.
  */
@@ -19,8 +22,7 @@ public final class SpineSvgBuilder {
     private static final int WIDTH = 60;
     private static final int HEIGHT = 320;
 
-    private static final int BAND_HEIGHT = 6;   // 상/하단 accent 밴드
-    private static final int HEAD_MARGIN = 20;  // 제목 영역 상단 여백(헤드밴드 아래)
+    private static final int HEAD_MARGIN = 20;  // 제목 영역 상단 여백
     private static final int TAIL_MARGIN = 22;   // 출판사 하단 안전 여백(테일밴드 위)
     private static final int GROUP_GAP = 12;      // 제목그룹 ~ 출판사 간격
 
@@ -37,8 +39,7 @@ public final class SpineSvgBuilder {
     private static final int PUBLISHER_LINE_HEIGHT = 11;
     private static final int PUBLISHER_MAX_LENGTH = 6;
 
-    private static final int SEP_PAD = 9;         // 밑줄과 제목 사이 여백
-    private static final int SEP_INSET = 16;      // 밑줄 좌우 여백
+    private static final int SEP_PAD = 9;         // 제목 그룹 상하 여백
 
     private SpineSvgBuilder() {
     }
@@ -47,7 +48,9 @@ public final class SpineSvgBuilder {
     public static String buildFromColors(String title, String author, String publisher,
                                          String primaryColor, String accentColor) {
         int centerX = WIDTH / 2;
-        String ink = contrastText(primaryColor);
+        String midColor = blend(primaryColor, accentColor, 0.45);
+        String ink = contrastText(midColor);
+        String halo = ink.equals("#ffffff") ? "#000000" : "#ffffff";
 
         String titleText = stripSpaces(title);
         String authorText = cut(stripSpaces(author), AUTHOR_MAX_LENGTH);
@@ -73,64 +76,56 @@ public final class SpineSvgBuilder {
         int groupHeight = 2 * SEP_PAD + titleHeight + (authorText.isEmpty() ? 0 : (TITLE_AUTHOR_GAP + authorHeight));
         int groupTop = regionTop + Math.max(0, (regionBottom - regionTop - groupHeight) / 2);
 
-        int sepTopY = groupTop;
         int titleTop = groupTop + SEP_PAD;
         int authorTop = titleTop + titleHeight + TITLE_AUTHOR_GAP;
-        int sepBottomY = authorText.isEmpty()
-                ? titleTop + titleHeight + SEP_PAD
-                : authorTop + authorHeight + 4;
 
         StringBuilder svg = new StringBuilder();
         svg.append("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"").append(WIDTH)
                 .append("\" height=\"").append(HEIGHT)
                 .append("\" viewBox=\"0 0 ").append(WIDTH).append(" ").append(HEIGHT).append("\">");
 
-        // 조명 그라데이션 정의
+        // 월페이퍼 그라데이션 + 글자 그림자(halo) 정의
         svg.append("<defs>")
-                .append("<linearGradient id=\"light\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\">")
-                .append("<stop offset=\"0\" stop-color=\"#000\" stop-opacity=\"0.30\"/>")
-                .append("<stop offset=\"0.12\" stop-color=\"#fff\" stop-opacity=\"0.12\"/>")
-                .append("<stop offset=\"0.5\" stop-color=\"#000\" stop-opacity=\"0\"/>")
-                .append("<stop offset=\"1\" stop-color=\"#000\" stop-opacity=\"0.33\"/>")
+                // 대각 소프트 그라데이션: primary → 중간 혼합색 → accent
+                .append("<linearGradient id=\"bg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">")
+                .append("<stop offset=\"0\" stop-color=\"").append(primaryColor).append("\"/>")
+                .append("<stop offset=\"0.55\" stop-color=\"").append(midColor).append("\"/>")
+                .append("<stop offset=\"1\" stop-color=\"").append(accentColor).append("\"/>")
                 .append("</linearGradient>")
+                // 상단에서 은은하게 번지는 빛(월페이퍼 느낌)
+                .append("<radialGradient id=\"glow\" cx=\"0.3\" cy=\"0.12\" r=\"0.9\">")
+                .append("<stop offset=\"0\" stop-color=\"#ffffff\" stop-opacity=\"0.18\"/>")
+                .append("<stop offset=\"1\" stop-color=\"#ffffff\" stop-opacity=\"0\"/>")
+                .append("</radialGradient>")
+                // 글자 halo: 그라데이션 어느 지점에서도 읽히도록 부드러운 그림자
+                .append("<filter id=\"ts\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\">")
+                .append("<feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"1.1\" flood-color=\"")
+                .append(halo).append("\" flood-opacity=\"0.45\"/>")
+                .append("</filter>")
                 .append("</defs>");
 
-        // 배경 + 조명
+        // 배경(그라데이션) + 상단 글로우
         svg.append("<rect x=\"0\" y=\"0\" width=\"").append(WIDTH).append("\" height=\"").append(HEIGHT)
-                .append("\" fill=\"").append(primaryColor).append("\"/>");
+                .append("\" fill=\"url(#bg)\"/>");
         svg.append("<rect x=\"0\" y=\"0\" width=\"").append(WIDTH).append("\" height=\"").append(HEIGHT)
-                .append("\" fill=\"url(#light)\"/>");
+                .append("\" fill=\"url(#glow)\"/>");
 
-        // 상/하단 accent 밴드
-        svg.append("<rect x=\"0\" y=\"0\" width=\"").append(WIDTH).append("\" height=\"").append(BAND_HEIGHT)
-                .append("\" fill=\"").append(accentColor).append("\"/>");
-        svg.append("<rect x=\"0\" y=\"").append(HEIGHT - BAND_HEIGHT).append("\" width=\"").append(WIDTH)
-                .append("\" height=\"").append(BAND_HEIGHT).append("\" fill=\"").append(accentColor).append("\"/>");
-
-        // 제목 프레이밍 밑줄(상/하)
-        svg.append(hairline(sepTopY, accentColor));
-        svg.append(hairline(sepBottomY, accentColor));
-
-        // 제목(히어로) + 저자 + 출판사
+        // 제목(히어로) + 저자 + 출판사 (모두 halo 그림자 적용)
+        svg.append("<g filter=\"url(#ts)\">");
         svg.append(verticalText(titleText, centerX, titleTop,
                 TITLE_FONT_SIZE, TITLE_LINE_HEIGHT, ink, null));
         if (!authorText.isEmpty()) {
             svg.append(verticalText(authorText, centerX, authorTop,
-                    AUTHOR_FONT_SIZE, AUTHOR_LINE_HEIGHT, ink, "0.85"));
+                    AUTHOR_FONT_SIZE, AUTHOR_LINE_HEIGHT, ink, "0.9"));
         }
         if (!publisherText.isEmpty()) {
             svg.append(verticalText(publisherText, centerX, pubTop,
-                    PUBLISHER_FONT_SIZE, PUBLISHER_LINE_HEIGHT, ink, "0.85"));
+                    PUBLISHER_FONT_SIZE, PUBLISHER_LINE_HEIGHT, ink, "0.9"));
         }
+        svg.append("</g>");
 
         svg.append("</svg>");
         return svg.toString();
-    }
-
-    /** 좌우 여백을 둔 accent 얇은 가로선. */
-    private static String hairline(int y, String color) {
-        return "<rect x=\"" + SEP_INSET + "\" y=\"" + y + "\" width=\"" + (WIDTH - 2 * SEP_INSET)
-                + "\" height=\"1.5\" rx=\"0.75\" fill=\"" + color + "\" fill-opacity=\"0.9\"/>";
     }
 
     /** 글자를 눕히지 않고 한 글자씩 아래로 쌓는 세로쓰기 &lt;text&gt; 블록. topY는 첫 글자 칸의 위쪽 y. */
@@ -151,6 +146,26 @@ public final class SpineSvgBuilder {
         }
         sb.append("</text>");
         return sb.toString();
+    }
+
+    /** 두 hex 색을 비율 t(0=a, 1=b)로 선형 혼합한 hex를 반환한다. */
+    private static String blend(String a, String b, double t) {
+        try {
+            String ha = a.startsWith("#") ? a.substring(1) : a;
+            String hb = b.startsWith("#") ? b.substring(1) : b;
+            int ra = Integer.parseInt(ha.substring(0, 2), 16);
+            int ga = Integer.parseInt(ha.substring(2, 4), 16);
+            int ba = Integer.parseInt(ha.substring(4, 6), 16);
+            int rb = Integer.parseInt(hb.substring(0, 2), 16);
+            int gb = Integer.parseInt(hb.substring(2, 4), 16);
+            int bb = Integer.parseInt(hb.substring(4, 6), 16);
+            int r = (int) Math.round(ra + (rb - ra) * t);
+            int g = (int) Math.round(ga + (gb - ga) * t);
+            int bl = (int) Math.round(ba + (bb - ba) * t);
+            return String.format("#%02x%02x%02x", r, g, bl);
+        } catch (Exception e) {
+            return a;
+        }
     }
 
     /** 배경색 밝기에 따라 잘 보이는 글자색(어두운 색/흰색)을 고른다. */

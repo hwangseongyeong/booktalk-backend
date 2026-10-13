@@ -35,9 +35,9 @@ public class ReadingRecordService {
             throw new IllegalStateException("이미 등록된 독서 기록이 있습니다. bookId=" + request.bookId());
         }
 
-        // 읽기 시작 시점에 책등이 아직 없으면 생성한다. (등록 시 생성 실패했거나 과거 데이터 대비)
-        // 책등은 책당 1회만 생성 — 이미 있으면 재생성하지 않는다.
-        if (book.getSpineImageUrl() == null) {
+        // 읽기 시작 시점에 책등 색이 아직 없으면 추출한다. (등록 시 실패했거나 과거 데이터 대비)
+        // 색상 추출은 책당 1회만 — 이미 있으면 다시 하지 않는다. SVG는 조회 시 실시간 렌더.
+        if (book.getPrimaryColor() == null) {
             spineAssetService.generateAndAttach(book);
         }
 
@@ -80,8 +80,8 @@ public class ReadingRecordService {
             throw new IllegalStateException("읽고 싶은 책만 읽기 시작할 수 있습니다.");
         }
 
-        // 읽기 시작 시점에 책등이 없으면 생성한다.
-        if (record.getBook().getSpineImageUrl() == null) {
+        // 읽기 시작 시점에 책등 색이 없으면 추출한다.
+        if (record.getBook().getPrimaryColor() == null) {
             spineAssetService.generateAndAttach(record.getBook());
         }
 

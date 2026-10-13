@@ -14,12 +14,17 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 책 등록 시 1회 호출되어 책등 이미지를 만들고 Book 엔티티에 캐싱한다.
- * 실제 저장 방식(로컬 디스크 / R2)은 SpineStorage 구현체가 storage.mode 설정에 따라 결정한다.
+ * 독서 기록 최초 생성 시 1회 호출되어 책등 색상(primary/accent)을 Book 엔티티에 캐싱한다.
  *
- * 실패 허용 정책: 표지 조회/색상 추출/업로드 중 어느 하나라도 실패해도 책 등록 자체는 막지 않는다.
+ * 책등 SVG는 저장하지 않고 {@code GET /api/v1/books/{id}/spine.svg}에서 실시간 렌더한다
+ * ({@link #renderSvg}). SVG는 색 2개로부터 문자열만 조립하므로 재생성 비용이 사실상 없고,
+ * 디자인을 바꿔도 배포 즉시 전 도서에 반영된다(사전 생성물 재생성 불필요).
+ *
+ * 외부 저장소 업로드 경로({@link #uploadSvg}, SpineStorage)는 추후 사전생성/CDN 캐싱에
+ * 대비해 그대로 보존하되 현재 파이프라인에서는 호출하지 않는다.
+ *
+ * 실패 허용 정책: 표지 조회/색상 추출이 실패해도 독서 기록 생성 자체는 막지 않는다.
  * - 색상 추출 실패 → FallbackPalette로 대체 (항상 primaryColor/accentColor는 채워짐)
- * - 업로드 실패 → spineImageUrl은 null로 남고, 프런트는 primaryColor 기반 색상 블록을 보여준다.
  */
 @Slf4j
 @Service
@@ -53,10 +58,35 @@ public class SpineAssetService {
         byte[] coverBytes = fetchCoverBytes(book);
         ImageColorExtractor.ExtractedColors colors = extractColors(coverBytes, book.getTitle());
 
-        String svg = buildSvg(book, colors);
-        String spineImageUrl = spineStorage.upload(book.getId(), svg.getBytes(StandardCharsets.UTF_8));
+        // 책등 SVG는 저장하지 않고 /api/v1/books/{id}/spine.svg 에서 실시간 렌더한다.
+        // 색만 캐싱해두면 렌더는 사실상 무비용. spineImageUrl은 쓰지 않으므로 null.
+        book.updateSpineAssets(null, colors.primaryColor(), colors.accentColor());
+    }
 
-        book.updateSpineAssets(spineImageUrl, colors.primaryColor(), colors.accentColor());
+    /**
+     * Book에 캐싱된 색으로 책등 SVG를 실시간 렌더한다(저장 없음).
+     * 아직 색이 없으면(독서 기록 전) FallbackPalette로 제목 기반 색을 쓴다 — 항상 유효한 SVG를 반환.
+     */
+    public String renderSvg(Book book) {
+        String primary = book.getPrimaryColor();
+        String accent = book.getAccentColor();
+        if (primary == null || accent == null) {
+            ImageColorExtractor.ExtractedColors fallback = FallbackPalette.pick(book.getTitle());
+            primary = fallback.primaryColor();
+            accent = fallback.accentColor();
+        }
+        return SpineSvgBuilder.buildFromColors(
+                book.getTitle(), book.getAuthor(), book.getPublisher(), primary, accent);
+    }
+
+    /**
+     * (현재 미사용) 책등 SVG를 외부 저장소(SpineStorage)에 업로드하고 공개 URL을 반환한다.
+     * 실시간 렌더로 전환하면서 파이프라인에서 제외했으나, 사전생성/CDN 캐싱 도입 시 재사용하려고 보존한다.
+     */
+    @SuppressWarnings("unused")
+    private String uploadSvg(Book book, ImageColorExtractor.ExtractedColors colors) {
+        String svg = buildSvg(book, colors);
+        return spineStorage.upload(book.getId(), svg.getBytes(StandardCharsets.UTF_8));
     }
 
     /** 표지 이미지를 1회 내려받는다. 색상 추출과 책등 배경에 함께 사용. 실패 시 null. */
