@@ -106,6 +106,18 @@ public class ReadingRecordService {
         return ReadingRecordResponse.from(record);
     }
 
+    /** 독서중인 책을 취소한다. 기록 자체를 삭제해 독서중 목록에서 제거한다. 완독 기록은 취소 대상이 아니다. */
+    @Transactional
+    public void cancelReading(Long id) {
+        ReadingRecord record = getOwnedRecord(id);
+
+        if (record.getStatus() != ReadingRecord.ReadingStatus.READING) {
+            throw new IllegalStateException("독서중인 책만 취소할 수 있습니다.");
+        }
+
+        readingRecordRepository.delete(record);
+    }
+
     public List<ReadingRecordResponse> getMyRecords(String status) {
         User user = currentUserResolver.getCurrentUser();
 

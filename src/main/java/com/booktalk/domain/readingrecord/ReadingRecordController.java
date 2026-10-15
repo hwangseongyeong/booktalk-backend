@@ -6,6 +6,7 @@ import com.booktalk.domain.readingrecord.dto.ReadingRecordStartRequest;
 import com.booktalk.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,6 +50,13 @@ public class ReadingRecordController {
             @RequestBody ReadingRecordCompleteRequest request
     ) {
         return ApiResponse.success(readingRecordService.complete(id, request));
+    }
+
+    /** 독서중 취소 — 독서 기록을 삭제한다(독서중 목록에서 제거). 완독 기록은 취소 대상이 아니다. */
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> cancelReading(@PathVariable Long id) {
+        readingRecordService.cancelReading(id);
+        return ApiResponse.success();
     }
 
     /** 내 독서 기록 목록. status=READING|COMPLETED 로 필터링 가능 */
