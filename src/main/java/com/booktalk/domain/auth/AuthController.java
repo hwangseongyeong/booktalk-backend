@@ -1,5 +1,6 @@
 package com.booktalk.domain.auth;
 
+import com.booktalk.domain.auth.dto.KakaoTokenLoginRequest;
 import com.booktalk.domain.auth.dto.OAuthLoginRequest;
 import com.booktalk.domain.auth.dto.RefreshTokenRequest;
 import com.booktalk.domain.auth.dto.TokenResponse;
@@ -33,6 +34,15 @@ public class AuthController {
             @Valid @RequestBody OAuthLoginRequest request
     ) {
         return ApiResponse.success(authService.login(parseProvider(provider), request));
+    }
+
+    /**
+     * 네이티브 카카오 SDK 로그인(모바일). 앱에서 받은 카카오 access token으로 로그인한다.
+     * (웹의 code 교환 방식과 달리, 네이티브 SDK는 토큰을 바로 주므로 토큰을 받는다.)
+     */
+    @PostMapping("/kakao/login/token")
+    public ApiResponse<TokenResponse> kakaoTokenLogin(@Valid @RequestBody KakaoTokenLoginRequest request) {
+        return ApiResponse.success(authService.loginWithKakaoAccessToken(request.accessToken()));
     }
 
     /** access token 만료 시 refresh token으로 재발급 */

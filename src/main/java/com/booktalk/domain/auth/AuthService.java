@@ -1,5 +1,6 @@
 package com.booktalk.domain.auth;
 
+import com.booktalk.domain.auth.client.KakaoOAuthClient;
 import com.booktalk.domain.auth.client.OAuthClient;
 import com.booktalk.domain.auth.dto.OAuthLoginRequest;
 import com.booktalk.domain.auth.dto.RefreshTokenRequest;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 public class AuthService {
 
     private final List<OAuthClient> oauthClients;
+    private final KakaoOAuthClient kakaoOAuthClient;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -34,6 +36,14 @@ public class AuthService {
         OAuthUserInfo userInfo = client.fetchUserInfo(request.code(), request.redirectUri(), request.state());
         User user = findOrCreateUser(userInfo);
 
+        return issueTokens(user);
+    }
+
+    /** 네이티브 카카오 SDK 로그인: 앱이 받은 카카오 access token으로 사용자 조회 후 JWT 발급. */
+    @Transactional
+    public TokenResponse loginWithKakaoAccessToken(String kakaoAccessToken) {
+        OAuthUserInfo userInfo = kakaoOAuthClient.fetchUserInfoByAccessToken(kakaoAccessToken);
+        User user = findOrCreateUser(userInfo);
         return issueTokens(user);
     }
 

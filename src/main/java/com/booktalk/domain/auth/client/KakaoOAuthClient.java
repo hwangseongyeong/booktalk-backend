@@ -38,6 +38,14 @@ public class KakaoOAuthClient implements OAuthClient {
         return requestUserInfo(accessToken);
     }
 
+    /**
+     * 네이티브 카카오 SDK가 발급한 access token으로 바로 사용자 정보를 조회한다(code 교환 생략).
+     * 모바일(앱) 로그인 경로에서 사용.
+     */
+    public OAuthUserInfo fetchUserInfoByAccessToken(String accessToken) {
+        return requestUserInfo(accessToken);
+    }
+
     private String requestAccessToken(String code, String redirectUri) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "authorization_code");
