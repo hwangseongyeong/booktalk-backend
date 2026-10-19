@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").permitAll() // 인가는 컨트롤러의 X-Admin-Token으로 처리
+                        .requestMatchers("/ws/**").permitAll() // WebSocket 핸드셰이크 인증은 JwtHandshakeInterceptor에서 처리
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )

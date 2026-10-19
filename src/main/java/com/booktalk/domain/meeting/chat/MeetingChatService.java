@@ -7,12 +7,16 @@ import com.booktalk.domain.meeting.chat.dto.MeetingChatMessageResponse;
 import com.booktalk.domain.meeting.chat.dto.MeetingChatReactRequest;
 import com.booktalk.domain.meeting.chat.dto.MeetingChatReactionsResponse;
 import com.booktalk.domain.meeting.chat.dto.MeetingChatSendRequest;
+import com.booktalk.domain.meeting.chat.realtime.ChatMessageCreatedEvent;
+import com.booktalk.domain.meeting.chat.realtime.ChatReactionChangedEvent;
 import com.booktalk.domain.user.User;
 import com.booktalk.global.security.CurrentUserResolver;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +39,7 @@ public class MeetingChatService {
 	private final MeetingChatMessageRepository chatRepository;
 	private final MeetingChatReactionRepository reactionRepository;
 	private final CurrentUserResolver currentUserResolver;
+	private final ApplicationEventPublisher eventPublisher;
 
 	/** 모임 메시지 목록. afterId가 있으면 그 이후의 새 메시지만(폴링). 참여자만 조회 가능. */
 	public List<MeetingChatMessageResponse> getMessages(Long meetingId, Long afterId) {
@@ -72,7 +77,10 @@ public class MeetingChatService {
 						.build());
 
 		// 새 메시지에는 아직 리액션이 없다.
-		return MeetingChatMessageResponse.from(saved, me.getId(), List.of());
+		MeetingChatMessageResponse response = MeetingChatMessageResponse.from(saved, me.getId(), List.of());
+		// 커밋 이후 참여자들에게 브로드캐스트(수신자는 senderId로 mine을 재계산).
+		eventPublisher.publishEvent(new ChatMessageCreatedEvent(meetingId, response));
+		return response;
 	}
 
 	/**
@@ -108,6 +116,18 @@ public class MeetingChatService {
 		}
 
 		List<MeetingChatReaction> reactions = reactionRepository.findByMessage(message);
+
+		// 커밋 이후 참여자들에게 이모지별 userId 목록을 브로드캐스트(수신자가 count/mine 계산).
+		List<ChatReactionChangedEvent.EmojiUserIds> composition = reactions.stream()
+				.collect(Collectors.groupingBy(
+						MeetingChatReaction::getEmoji,
+						LinkedHashMap::new,
+						Collectors.mapping(r -> r.getUser().getId(), Collectors.toList())))
+				.entrySet().stream()
+				.map(e -> new ChatReactionChangedEvent.EmojiUserIds(e.getKey(), e.getValue()))
+				.toList();
+		eventPublisher.publishEvent(new ChatReactionChangedEvent(meetingId, messageId, composition));
+
 		return MeetingChatMessageResponse.from(message, me.getId(), reactions);
 	}
 

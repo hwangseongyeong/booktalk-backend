@@ -28,6 +28,9 @@ dependencies {
 	implementation("org.flywaydb:flyway-core")
 	implementation("org.flywaydb:flyway-mysql")
 
+	// WebSocket (실시간 채팅)
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
+
 	// Security / JWT
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("io.jsonwebtoken:jjwt-api:0.12.5")
