@@ -1,7 +1,10 @@
 package com.booktalk.domain.meeting.chat;
 
+import com.booktalk.domain.meeting.Meeting;
 import com.booktalk.domain.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,4 +19,8 @@ public interface MeetingChatReactionRepository extends JpaRepository<MeetingChat
 
 	// 단일 메시지의 리액션
 	List<MeetingChatReaction> findByMessage(MeetingChatMessage message);
+
+	// 모임 전체의 리액션(폴링용). mine 계산을 위해 user를 함께 가져온다.
+	@Query("select r from MeetingChatReaction r join fetch r.user where r.message.meeting = :meeting")
+	List<MeetingChatReaction> findAllByMeeting(@Param("meeting") Meeting meeting);
 }

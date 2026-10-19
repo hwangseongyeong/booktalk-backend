@@ -26,6 +26,24 @@ public record MeetingChatMessageResponse(
 ) {
 	/** 이모지별 리액션 집계. mine=true면 현재 사용자가 그 이모지를 눌렀다는 뜻. */
 	public record ReactionSummary(String emoji, int count, boolean mine) {
+
+		/** 이모지 등장 순서를 유지하며 개수를 집계하고, 현재 사용자의 선택 여부를 표시한다. */
+		public static List<ReactionSummary> summarize(List<MeetingChatReaction> reactions, Long currentUserId) {
+			if (reactions == null || reactions.isEmpty()) {
+				return List.of();
+			}
+			Map<String, int[]> counts = new LinkedHashMap<>(); // emoji -> [count, mine(0/1)]
+			for (MeetingChatReaction r : reactions) {
+				int[] c = counts.computeIfAbsent(r.getEmoji(), k -> new int[2]);
+				c[0]++;
+				if (r.getUser().getId().equals(currentUserId)) {
+					c[1] = 1;
+				}
+			}
+			return counts.entrySet().stream()
+					.map(e -> new ReactionSummary(e.getKey(), e.getValue()[0], e.getValue()[1] == 1))
+					.toList();
+		}
 	}
 
 	public static MeetingChatMessageResponse from(
@@ -43,25 +61,7 @@ public record MeetingChatMessageResponse(
 				message.getContent(),
 				message.getCreatedAt(),
 				sender.getId().equals(currentUserId),
-				summarize(reactions, currentUserId)
+				ReactionSummary.summarize(reactions, currentUserId)
 		);
-	}
-
-	/** 이모지 등장 순서를 유지하며 개수를 집계하고, 현재 사용자의 선택 여부를 표시한다. */
-	private static List<ReactionSummary> summarize(List<MeetingChatReaction> reactions, Long currentUserId) {
-		if (reactions == null || reactions.isEmpty()) {
-			return List.of();
-		}
-		Map<String, int[]> counts = new LinkedHashMap<>(); // emoji -> [count, mine(0/1)]
-		for (MeetingChatReaction r : reactions) {
-			int[] c = counts.computeIfAbsent(r.getEmoji(), k -> new int[2]);
-			c[0]++;
-			if (r.getUser().getId().equals(currentUserId)) {
-				c[1] = 1;
-			}
-		}
-		return counts.entrySet().stream()
-				.map(e -> new ReactionSummary(e.getKey(), e.getValue()[0], e.getValue()[1] == 1))
-				.toList();
 	}
 }

@@ -5,6 +5,7 @@ import com.booktalk.domain.meeting.MeetingMemberRepository;
 import com.booktalk.domain.meeting.MeetingRepository;
 import com.booktalk.domain.meeting.chat.dto.MeetingChatMessageResponse;
 import com.booktalk.domain.meeting.chat.dto.MeetingChatReactRequest;
+import com.booktalk.domain.meeting.chat.dto.MeetingChatReactionsResponse;
 import com.booktalk.domain.meeting.chat.dto.MeetingChatSendRequest;
 import com.booktalk.domain.user.User;
 import com.booktalk.global.security.CurrentUserResolver;
@@ -110,6 +111,21 @@ public class MeetingChatService {
 
 		List<MeetingChatReaction> reactions = reactionRepository.findByMessage(message);
 		return MeetingChatMessageResponse.from(message, me.getId(), reactions);
+	}
+
+	/**
+	 * 모임의 모든 메시지 리액션 집계(폴링용). 리액션이 있는 메시지만 반환하며,
+	 * 반환 목록에 없는 메시지는 리액션이 모두 취소된 것으로 보고 프런트에서 비운다.
+	 */
+	public List<MeetingChatReactionsResponse> getReactions(Long meetingId) {
+		User me = currentUserResolver.getCurrentUser();
+		Meeting meeting = getParticipatingMeeting(meetingId, me);
+
+		return reactionRepository.findAllByMeeting(meeting).stream()
+				.collect(Collectors.groupingBy(r -> r.getMessage().getId()))
+				.entrySet().stream()
+				.map(e -> MeetingChatReactionsResponse.of(e.getKey(), e.getValue(), me.getId()))
+				.toList();
 	}
 
 	/** 메시지 묶음의 리액션을 한 번에 조회해 messageId별로 묶는다(N+1 방지). */
