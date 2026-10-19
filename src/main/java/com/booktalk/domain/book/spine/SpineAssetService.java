@@ -20,9 +20,6 @@ import java.nio.charset.StandardCharsets;
  * ({@link #renderSvg}). SVG는 색 2개로부터 문자열만 조립하므로 재생성 비용이 사실상 없고,
  * 디자인을 바꿔도 배포 즉시 전 도서에 반영된다(사전 생성물 재생성 불필요).
  *
- * 외부 저장소 업로드 경로({@link #uploadSvg}, SpineStorage)는 추후 사전생성/CDN 캐싱에
- * 대비해 그대로 보존하되 현재 파이프라인에서는 호출하지 않는다.
- *
  * 실패 허용 정책: 표지 조회/색상 추출이 실패해도 독서 기록 생성 자체는 막지 않는다.
  * - 색상 추출 실패 → FallbackPalette로 대체 (항상 primaryColor/accentColor는 채워짐)
  */
@@ -36,8 +33,6 @@ public class SpineAssetService {
     private static final String BROWSER_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                     + "Chrome/120.0.0.0 Safari/537.36";
-
-    private final SpineStorage spineStorage;
 
     // 표지 프록시(Cloudflare Worker) 설정. 비어 있으면 프록시 없이 직접 조회.
     // 카카오 CDN이 서버(AWS) IP를 차단하므로, 설정 시 비-AWS IP인 프록시 경유로 표지를 받는다.
@@ -77,16 +72,6 @@ public class SpineAssetService {
         }
         return SpineSvgBuilder.buildFromColors(
                 book.getTitle(), book.getAuthor(), book.getPublisher(), primary, accent);
-    }
-
-    /**
-     * (현재 미사용) 책등 SVG를 외부 저장소(SpineStorage)에 업로드하고 공개 URL을 반환한다.
-     * 실시간 렌더로 전환하면서 파이프라인에서 제외했으나, 사전생성/CDN 캐싱 도입 시 재사용하려고 보존한다.
-     */
-    @SuppressWarnings("unused")
-    private String uploadSvg(Book book, ImageColorExtractor.ExtractedColors colors) {
-        String svg = buildSvg(book, colors);
-        return spineStorage.upload(book.getId(), svg.getBytes(StandardCharsets.UTF_8));
     }
 
     /** 표지 이미지를 1회 내려받는다. 색상 추출과 책등 배경에 함께 사용. 실패 시 null. */
@@ -188,15 +173,5 @@ public class SpineAssetService {
             }
         }
         return FallbackPalette.pick(title);
-    }
-
-    /**
-     * 색상 기반으로 책등을 그린다. 저해상도 표지를 세로로 잘라 배경에 깔면 뿌옇게 뭉개져
-     * 품질이 낮으므로, 표지는 색상 추출에만 쓰고 책등 이미지는 색상 기반으로 새로 그린다.
-     */
-    private String buildSvg(Book book, ImageColorExtractor.ExtractedColors colors) {
-        return SpineSvgBuilder.buildFromColors(
-                book.getTitle(), book.getAuthor(), book.getPublisher(),
-                colors.primaryColor(), colors.accentColor());
     }
 }

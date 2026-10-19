@@ -34,10 +34,6 @@ dependencies {
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.5")
 
-	// AWS S3 (책등 이미지 업로드)
-	implementation(platform("software.amazon.awssdk:bom:2.25.60"))
-	implementation("software.amazon.awssdk:s3")
-
 	// Swagger / OpenAPI
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 

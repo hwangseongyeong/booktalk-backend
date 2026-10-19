@@ -34,32 +34,5 @@ oauth2:
     client-secret: your-facebook-app-secret
     redirect-uri: http://localhost:3000/oauth/callback/facebook
 
-storage:
-  # local: 로컬 디스크에 저장 (R2/AWS 계정 없어도 바로 동작, 기본값)
-  # s3   : AWS S3에 저장 (버킷 만들면 이 값만 s3로 바꾸면 됨)
-  # r2   : Cloudflare R2에 저장 (계정 만들면 이 값만 r2로 바꾸면 됨)
-  mode: local
-  local:
-    upload-dir: ./uploads                          # 프로젝트 루트 기준 상대경로 (원하면 절대경로로 변경)
-    public-base-url: http://localhost:8080/uploads  # 배포 시 실제 서버 주소로 변경
-
-# storage.mode: s3 로 바꿨을 때 사용되는 설정 (지금은 안 읽힘)
-s3:
-  region: ap-northeast-2
-  bucket: booktalk-spine-images
-  # 로컬 테스트 시에만 키를 채우세요. EC2/ECS에 배포할 때는 비워두면 IAM Role 자격증명을 사용합니다.
-  access-key: your-aws-access-key
-  secret-key: your-aws-secret-key
-  # CloudFront로 서빙 시 CloudFront 도메인, S3 직접 공개 시 https://{bucket}.s3.{region}.amazonaws.com
-  public-base-url: https://your-cloudfront-domain
-
-# storage.mode: r2 로 바꿨을 때 사용되는 설정 (지금은 안 읽힘)
-r2:
-  # Cloudflare 대시보드 > R2 > 계정 ID
-  account-id: your-cloudflare-account-id
-  # R2 > Manage API tokens 에서 발급 (S3 호환 access key/secret 형태)
-  access-key: your-r2-access-key
-  secret-key: your-r2-secret-key
-  bucket: booktalk-spine-images
-  # 버킷 설정에서 Public access를 켜면 나오는 https://pub-xxxx.r2.dev 주소, 또는 연결한 커스텀 도메인
-  public-base-url: https://pub-xxxxxxxxxxxx.r2.dev
+# 책등 이미지는 서버에서 실시간 SVG 렌더(GET /api/v1/books/{id}/spine.svg)로 제공한다.
+# 별도 파일 저장소(S3/R2/로컬 디스크) 설정이 필요 없다.
