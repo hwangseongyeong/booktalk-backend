@@ -1,6 +1,7 @@
 package com.booktalk.domain.meeting.chat;
 
 import com.booktalk.domain.meeting.chat.dto.MeetingChatMessageResponse;
+import com.booktalk.domain.meeting.chat.dto.MeetingChatReactRequest;
 import com.booktalk.domain.meeting.chat.dto.MeetingChatSendRequest;
 import com.booktalk.global.common.ApiResponse;
 import jakarta.validation.Valid;
@@ -38,5 +39,15 @@ public class MeetingChatController {
 			@Valid @RequestBody MeetingChatSendRequest request
 	) {
 		return ApiResponse.success(chatService.send(meetingId, request));
+	}
+
+	/** 메시지 이모지 리액션 토글(추가/교체/취소). 갱신된 메시지를 반환한다. */
+	@PostMapping("/{messageId}/reactions")
+	public ApiResponse<MeetingChatMessageResponse> react(
+			@PathVariable Long meetingId,
+			@PathVariable Long messageId,
+			@Valid @RequestBody MeetingChatReactRequest request
+	) {
+		return ApiResponse.success(chatService.react(meetingId, messageId, request));
 	}
 }
