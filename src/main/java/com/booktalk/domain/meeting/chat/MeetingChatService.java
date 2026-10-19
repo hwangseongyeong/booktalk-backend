@@ -74,7 +74,7 @@ public class MeetingChatService {
 
 	/**
 	 * 메시지에 이모지 리액션을 토글한다. 참여자만 가능.
-	 * 같은 이모지를 다시 누르면 취소, 다른 이모지면 교체, 없으면 추가.
+	 * 같은 이모지를 다시 누르면 취소, 아니면 추가. 한 메시지에 여러 이모지를 동시에 달 수 있다.
 	 */
 	@Transactional
 	public MeetingChatMessageResponse react(Long meetingId, Long messageId, MeetingChatReactRequest request) {
@@ -92,14 +92,9 @@ public class MeetingChatService {
 			throw new IllegalArgumentException("해당 모임의 메시지가 아닙니다.");
 		}
 
-		Optional<MeetingChatReaction> existing = reactionRepository.findByMessageAndUser(message, me);
+		Optional<MeetingChatReaction> existing = reactionRepository.findByMessageAndUserAndEmoji(message, me, emoji);
 		if (existing.isPresent()) {
-			MeetingChatReaction reaction = existing.get();
-			if (reaction.getEmoji().equals(emoji)) {
-				reactionRepository.delete(reaction); // 같은 이모지 → 토글 취소
-			} else {
-				reaction.changeEmoji(emoji); // 다른 이모지 → 교체
-			}
+			reactionRepository.delete(existing.get()); // 같은 이모지 → 토글 취소
 		} else {
 			reactionRepository.save(
 					MeetingChatReaction.builder()

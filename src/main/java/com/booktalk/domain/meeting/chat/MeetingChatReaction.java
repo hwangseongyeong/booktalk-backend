@@ -10,15 +10,15 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 채팅 메시지에 대한 이모지 리액션. 사용자당 메시지 1개(이모지는 변경 가능).
+ * 채팅 메시지에 대한 이모지 리액션. 사용자당 메시지+이모지 1개(여러 이모지 동시 가능, 이모지별 토글).
  * 참여자만 남길 수 있다(검증은 서비스에서).
  */
 @Entity
 @Table(
 		name = "meeting_chat_reactions",
 		uniqueConstraints = @UniqueConstraint(
-				name = "uk_meeting_chat_reaction_message_user",
-				columnNames = {"message_id", "user_id"}
+				name = "uk_meeting_chat_reaction_message_user_emoji",
+				columnNames = {"message_id", "user_id", "emoji"}
 		)
 )
 @Getter
@@ -47,12 +47,6 @@ public class MeetingChatReaction {
 	public MeetingChatReaction(MeetingChatMessage message, User user, String emoji) {
 		this.message = message;
 		this.user = user;
-		this.emoji = emoji;
-		this.createdAt = LocalDateTime.now();
-	}
-
-	/** 이모지 변경(사용자가 같은 메시지에 다른 이모지를 누른 경우). */
-	public void changeEmoji(String emoji) {
 		this.emoji = emoji;
 		this.createdAt = LocalDateTime.now();
 	}
