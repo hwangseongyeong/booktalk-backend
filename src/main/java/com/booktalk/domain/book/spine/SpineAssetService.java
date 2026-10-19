@@ -1,10 +1,12 @@
 package com.booktalk.domain.book.spine;
 
 import com.booktalk.domain.book.Book;
+import com.booktalk.domain.book.BookRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -12,6 +14,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 /**
  * 독서 기록 최초 생성 시 1회 호출되어 책등 색상(primary/accent)을 Book 엔티티에 캐싱한다.
@@ -34,6 +37,9 @@ public class SpineAssetService {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                     + "Chrome/120.0.0.0 Safari/537.36";
 
+    private final BookRepository bookRepository;
+    private final BookColorWriter bookColorWriter;
+
     // 표지 프록시(Cloudflare Worker) 설정. 비어 있으면 프록시 없이 직접 조회.
     // 카카오 CDN이 서버(AWS) IP를 차단하므로, 설정 시 비-AWS IP인 프록시 경유로 표지를 받는다.
     @Value("${cover-proxy.base-url:}")
@@ -43,12 +49,44 @@ public class SpineAssetService {
     private String coverProxyToken;
 
     // 표지 이미지 URL이 리다이렉트(301/302)하는 경우도 있어 리다이렉트를 따라가도록 설정한다.
-    private final RestClient restClient = RestClient.builder()
-            .requestFactory(new JdkClientHttpRequestFactory(
-                    HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()))
-            .defaultHeader("User-Agent", BROWSER_USER_AGENT)
-            .build();
+    // 외부 CDN이 느리거나 응답이 없을 때 스레드가 무한정 묶이지 않도록 연결/읽기 타임아웃을 건다.
+    private final RestClient restClient = buildRestClient();
 
+    private static RestClient buildRestClient() {
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
+                HttpClient.newBuilder()
+                        .followRedirects(HttpClient.Redirect.NORMAL)
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build());
+        requestFactory.setReadTimeout(Duration.ofSeconds(10));
+        return RestClient.builder()
+                .requestFactory(requestFactory)
+                .defaultHeader("User-Agent", BROWSER_USER_AGENT)
+                .build();
+    }
+
+    /**
+     * 책등 색상을 비동기로 추출해 저장한다(요청 트랜잭션 밖).
+     * 느린 표지 다운로드를 별도 스레드에서 수행하고, DB 쓰기는 {@link BookColorWriter}의 짧은
+     * 트랜잭션으로만 처리해 외부 호출 동안 DB 커넥션이 점유되지 않게 한다.
+     * 색상은 책당 1회만 채우며, 실패해도 조회 시 FallbackPalette로 렌더되므로 조용히 넘어간다.
+     */
+    @Async("spineExecutor")
+    public void attachColorsAsync(Long bookId) {
+        // 짧은 자체 트랜잭션으로 책을 읽어오고(이후 세션은 닫힘), 느린 외부 호출은 트랜잭션 밖에서 수행한다.
+        Book book = bookRepository.findById(bookId).orElse(null);
+        if (book == null || (book.getPrimaryColor() != null && book.getAccentColor() != null)) {
+            return;
+        }
+        byte[] coverBytes = fetchCoverBytes(book); // 느린 HTTP — DB 커넥션 점유 없음
+        ImageColorExtractor.ExtractedColors colors = extractColors(coverBytes, book.getTitle());
+        bookColorWriter.save(bookId, colors.primaryColor(), colors.accentColor());
+    }
+
+    /**
+     * 책등 색상을 동기로 추출해 (관리되는) Book 엔티티에 채운다. 관리자 일괄 재생성 경로에서 사용.
+     * 사용자 요청 경로에서는 {@link #attachColorsAsync(Long)}를 사용한다.
+     */
     public void generateAndAttach(Book book) {
         byte[] coverBytes = fetchCoverBytes(book);
         ImageColorExtractor.ExtractedColors colors = extractColors(coverBytes, book.getTitle());

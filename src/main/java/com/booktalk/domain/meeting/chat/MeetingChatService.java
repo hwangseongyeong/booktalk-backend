@@ -27,6 +27,9 @@ public class MeetingChatService {
 	/** 리액션으로 허용되는 이모지(프런트 고정 팔레트와 동일). */
 	private static final Set<String> ALLOWED_REACTIONS = Set.of("👍", "❤️", "😂", "😮", "😢");
 
+	/** 리액션 폴링 시 조회할 최근 메시지 윈도우 크기(최신 id 기준 N개). 전체 히스토리 스캔 방지. */
+	private static final int REACTION_POLL_WINDOW = 300;
+
 	private final MeetingRepository meetingRepository;
 	private final MeetingMemberRepository meetingMemberRepository;
 	private final MeetingChatMessageRepository chatRepository;
@@ -109,18 +112,19 @@ public class MeetingChatService {
 	}
 
 	/**
-	 * 모임의 모든 메시지 리액션 집계(폴링용). 리액션이 있는 메시지만 반환하며,
-	 * 반환 목록에 없는 메시지는 리액션이 모두 취소된 것으로 보고 프런트에서 비운다.
+	 * 최근 메시지 윈도우의 리액션 집계(폴링용). 전체 히스토리를 매번 긁지 않도록 최신 id 기준
+	 * {@link #REACTION_POLL_WINDOW}개 범위만 조회한다. 윈도우 밖(오래된 메시지)의 리액션 변경은
+	 * 재진입(전체 로드) 시 반영된다. fromMessageId를 함께 반환해 프런트가 갱신 범위를 알 수 있게 한다.
 	 */
-	public List<MeetingChatReactionsResponse> getReactions(Long meetingId) {
+	public MeetingChatReactionsResponse getReactions(Long meetingId) {
 		User me = currentUserResolver.getCurrentUser();
 		Meeting meeting = getParticipatingMeeting(meetingId, me);
 
-		return reactionRepository.findAllByMeeting(meeting).stream()
-				.collect(Collectors.groupingBy(r -> r.getMessage().getId()))
-				.entrySet().stream()
-				.map(e -> MeetingChatReactionsResponse.of(e.getKey(), e.getValue(), me.getId()))
-				.toList();
+		Long maxId = chatRepository.findMaxIdByMeeting(meeting);
+		long fromId = (maxId == null) ? 0L : Math.max(0L, maxId - REACTION_POLL_WINDOW);
+
+		List<MeetingChatReaction> reactions = reactionRepository.findByMeetingFromMessageId(meeting, fromId);
+		return MeetingChatReactionsResponse.of(fromId, reactions, me.getId());
 	}
 
 	/** 메시지 묶음의 리액션을 한 번에 조회해 messageId별로 묶는다(N+1 방지). */

@@ -42,9 +42,9 @@ public class MeetingChatController {
 		return ApiResponse.success(chatService.send(meetingId, request));
 	}
 
-	/** 모임 전체 메시지의 리액션 집계(폴링으로 기존 메시지 변경분 반영용). */
+	/** 최근 메시지 윈도우의 리액션 집계(폴링으로 기존 메시지 변경분 반영용). */
 	@GetMapping("/reactions")
-	public ApiResponse<List<MeetingChatReactionsResponse>> reactions(@PathVariable Long meetingId) {
+	public ApiResponse<MeetingChatReactionsResponse> reactions(@PathVariable Long meetingId) {
 		return ApiResponse.success(chatService.getReactions(meetingId));
 	}
 
