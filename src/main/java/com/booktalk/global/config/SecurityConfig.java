@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/uploads/**").permitAll() // 업로드 이미지 조회는 공개(업로드 POST는 인증 필요)
                         .requestMatchers("/api/v1/admin/**").permitAll() // 인가는 컨트롤러의 X-Admin-Token으로 처리
                         .requestMatchers("/ws/**").permitAll() // WebSocket 핸드셰이크 인증은 JwtHandshakeInterceptor에서 처리
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

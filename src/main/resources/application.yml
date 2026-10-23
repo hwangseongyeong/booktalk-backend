@@ -3,6 +3,10 @@ spring:
     name: booktalk-backend
   profiles:
     active: local
+  servlet:
+    multipart:
+      max-file-size: 10MB      # 이미지 업로드 상한(UploadService의 MAX_BYTES와 일치)
+      max-request-size: 12MB
   datasource:
     # DB 커넥션 풀(HikariCP). 고동접 시 기본값(10)은 금방 고갈되므로 명시적으로 넉넉히 잡는다.
     # 인스턴스당 20 기준(수평 확장). DB max_connections와의 총합을 넘지 않게 운영에서 조정.
