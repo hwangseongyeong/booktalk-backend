@@ -20,6 +20,9 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.UUID;
 
@@ -50,6 +53,9 @@ public class UploadService {
 
     private static final long MAX_BYTES = 10L * 1024 * 1024; // 10MB
     private static final String S3_PREFIX = "images/";
+    // 저장 시 날짜 폴더(yyyyMMdd)로 분할한다. 폴더 기준 날짜는 한국 시간.
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
+    private static final DateTimeFormatter DATE_DIR = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final Path imageDir;
     private final boolean useS3;
@@ -92,30 +98,33 @@ public class UploadService {
             throw new IllegalArgumentException("지원하지 않는 이미지 형식입니다. (jpg, png, webp, gif만 가능)");
         }
 
+        // 날짜 폴더(yyyyMMdd) 아래에 UUID 파일명으로 저장한다. 예: 20261028/abc.jpg
+        String dateDir = LocalDate.now(ZONE).format(DATE_DIR);
         String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;
+        String relKey = dateDir + "/" + filename;
         try {
             if (useS3) {
                 s3.putObject(
                         PutObjectRequest.builder()
                                 .bucket(bucket)
-                                .key(S3_PREFIX + filename)
+                                .key(S3_PREFIX + relKey)
                                 .contentType(file.getContentType())
                                 .build(),
                         RequestBody.fromBytes(file.getBytes()));
             } else {
-                Files.createDirectories(imageDir);
-                Path target = imageDir.resolve(filename).normalize();
-                // createDirectories/resolve 조합의 비정상 경로 방어
+                Path target = imageDir.resolve(relKey).normalize();
+                // resolve 조합의 비정상 경로 방어
                 if (!target.startsWith(imageDir)) {
                     throw new IllegalArgumentException("잘못된 파일 경로입니다.");
                 }
+                Files.createDirectories(target.getParent());
                 file.transferTo(target);
             }
         } catch (IOException e) {
             log.error("이미지 저장 실패: {}", e.getMessage(), e);
             throw new UncheckedIOException("이미지 저장에 실패했습니다.", e);
         }
-        return "/api/v1/uploads/images/" + filename;
+        return "/api/v1/uploads/images/" + relKey;
     }
 
     /** 저장된 이미지 바이트를 읽어온다. 경로 조작(../ 등)은 거부한다. */
@@ -171,9 +180,13 @@ public class UploadService {
         }
     }
 
-    private void validateFilename(String filename) {
-        if (filename == null || !filename.matches("[A-Za-z0-9._-]+")) {
-            throw new IllegalArgumentException("잘못된 파일명입니다.");
+    // 키는 날짜 폴더를 포함할 수 있어 슬래시를 허용하되, 경로 탈출(.. / 절대경로)은 거부한다.
+    private void validateFilename(String key) {
+        if (key == null || key.isBlank()
+                || !key.matches("[A-Za-z0-9._/-]+")
+                || key.contains("..")
+                || key.startsWith("/")) {
+            throw new IllegalArgumentException("잘못된 파일 경로입니다.");
         }
     }
 

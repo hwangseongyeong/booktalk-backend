@@ -33,11 +33,14 @@ public class UploadController {
         return ApiResponse.success(new UploadResponse(url));
     }
 
-    @GetMapping("/images/{filename}")
-    public ResponseEntity<byte[]> getImage(@PathVariable String filename) {
-        byte[] bytes = uploadService.read(filename);
+    // 키는 날짜 폴더를 포함할 수 있다(예: images 경로 뒤 "20261028/xxxx.jpg").
+    // 날짜 폴더가 없던 기존 이미지("xxxx.jpg")도 그대로 받는다. {*key}로 하위 경로 전체를 캡처한다.
+    @GetMapping("/images/{*key}")
+    public ResponseEntity<byte[]> getImage(@PathVariable String key) {
+        String relKey = key.startsWith("/") ? key.substring(1) : key;
+        byte[] bytes = uploadService.read(relKey);
         return ResponseEntity.ok()
-                .contentType(uploadService.contentTypeOf(filename))
+                .contentType(uploadService.contentTypeOf(relKey))
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic())
                 .body(bytes);
     }
