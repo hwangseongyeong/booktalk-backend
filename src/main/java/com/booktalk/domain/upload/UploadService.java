@@ -62,22 +62,29 @@ public class UploadService {
     private final boolean useS3;
     private final String bucket;
     private final S3Client s3; // S3 모드에서만 존재(null 가능)
+    /** CloudFront(또는 S3 공개) 베이스 URL. 설정되면 새 업로드는 이 URL로 직접 서빙(백엔드 프록시 우회). */
+    private final String publicBaseUrl;
 
     public UploadService(
             @Value("${app.upload.dir:uploads}") String uploadDir,
             @Value("${app.upload.storage:local}") String storage,
             @Value("${app.s3.bucket:}") String bucket,
+            @Value("${app.s3.public-base-url:}") String publicBaseUrl,
             ObjectProvider<S3Client> s3Provider) {
         this.imageDir = Paths.get(uploadDir, "images").toAbsolutePath().normalize();
         this.useS3 = "s3".equalsIgnoreCase(storage);
         this.bucket = bucket;
         this.s3 = s3Provider.getIfAvailable();
+        // 끝 슬래시 제거(뒤에서 "/images/..."를 붙이므로).
+        this.publicBaseUrl = (publicBaseUrl == null || publicBaseUrl.isBlank())
+                ? null : publicBaseUrl.replaceAll("/+$", "");
         if (useS3) {
             if (this.s3 == null || bucket == null || bucket.isBlank()) {
                 throw new IllegalStateException(
                         "app.upload.storage=s3 이지만 S3Client 또는 app.s3.bucket 설정이 없습니다.");
             }
-            log.info("이미지 저장소: S3 (bucket={})", bucket);
+            log.info("이미지 저장소: S3 (bucket={}, publicBaseUrl={})",
+                    bucket, this.publicBaseUrl != null ? this.publicBaseUrl : "(없음·백엔드 프록시 서빙)");
         } else {
             log.info("이미지 저장소: 로컬 디스크 ({})", imageDir);
         }
@@ -127,6 +134,11 @@ public class UploadService {
         } catch (IOException e) {
             log.error("이미지 저장 실패: {}", e.getMessage(), e);
             throw new UncheckedIOException("이미지 저장에 실패했습니다.", e);
+        }
+        // CloudFront 등 공개 베이스 URL이 설정돼 있으면 CDN 직접 서빙 URL을 반환(백엔드/S3 egress 우회).
+        // 없으면 기존처럼 백엔드 프록시 경로를 반환한다.
+        if (publicBaseUrl != null) {
+            return publicBaseUrl + "/" + S3_PREFIX + relKey;
         }
         return "/api/v1/uploads/images/" + relKey;
     }

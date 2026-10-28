@@ -85,6 +85,8 @@ services:
       AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      # CloudFront 배포 도메인. 설정하면 새 업로드는 CDN URL로 직접 서빙(백엔드/S3 egress 우회).
+      AWS_S3_PUBLIC_BASE_URL: ${AWS_S3_PUBLIC_BASE_URL:-}
 
       # 책등 일괄 재생성 관리자 엔드포인트 토큰. 비워두면 해당 API는 항상 403(비활성).
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}

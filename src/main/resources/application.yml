@@ -53,6 +53,9 @@ app:
   s3:
     bucket: ${AWS_S3_BUCKET:}
     region: ${AWS_S3_REGION:ap-northeast-2}
+    # CloudFront(또는 S3 공개) 베이스 URL. 설정하면 새 업로드는 이 URL로 직접 서빙(백엔드 프록시 우회).
+    # 예: https://dxxxxxxxx.cloudfront.net  (비우면 백엔드 프록시 /api/v1/uploads/images/... 로 서빙)
+    public-base-url: ${AWS_S3_PUBLIC_BASE_URL:}
     # 운영에서는 IAM 역할 권장(키 비워두면 기본 자격증명 체인 사용).
     # 로컬 개발에서만 application-local.yml 또는 환경변수로 키 주입.
     access-key: ${AWS_ACCESS_KEY_ID:}
