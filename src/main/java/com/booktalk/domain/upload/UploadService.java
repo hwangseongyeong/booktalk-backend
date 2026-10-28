@@ -1,10 +1,19 @@
 package com.booktalk.domain.upload;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -15,13 +24,17 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 이미지 파일을 로컬 디스크에 저장하고 다시 읽어오는 서비스 (MVP 수준).
+ * 이미지 파일을 저장하고 다시 읽어오는 서비스.
  *
- * 저장 위치는 {@code app.upload.dir}(기본 "uploads") 아래 {@code images/} 폴더이고,
- * 서빙 경로는 {@code GET /api/v1/uploads/images/{파일명}} 이다. S3 전환 전까지의 로컬 저장소.
+ * 저장소는 {@code app.upload.storage}로 선택한다.
+ * - {@code local}(기본): 로컬 디스크 {@code app.upload.dir}/images 아래 저장.
+ * - {@code s3}: {@code app.s3.bucket} 버킷의 {@code images/} 접두어 아래 저장.
  *
- * 허용 포맷은 jpg/jpeg/png/webp/gif로 제한한다. 파일 크기 상한은 멀티파트 설정
- * (spring.servlet.multipart.max-file-size)에서 1차로 막고, 여기서도 방어적으로 검사한다.
+ * 어느 모드든 서빙 경로(반환 URL)는 {@code GET /api/v1/uploads/images/{파일명}}으로 동일하다.
+ * 그래서 저장소를 바꿔도 DB에 저장된 기존 URL은 그대로 유효하다.
+ * S3 모드에서 읽을 때 S3에 없으면 레거시(예전 로컬 저장분)를 로컬 디스크에서 fallback으로 읽는다.
+ *
+ * 허용 포맷은 jpg/jpeg/png/webp/gif, 크기 상한 10MB.
  */
 @Slf4j
 @Service
@@ -36,11 +49,31 @@ public class UploadService {
     );
 
     private static final long MAX_BYTES = 10L * 1024 * 1024; // 10MB
+    private static final String S3_PREFIX = "images/";
 
     private final Path imageDir;
+    private final boolean useS3;
+    private final String bucket;
+    private final S3Client s3; // S3 모드에서만 존재(null 가능)
 
-    public UploadService(@Value("${app.upload.dir:uploads}") String uploadDir) {
+    public UploadService(
+            @Value("${app.upload.dir:uploads}") String uploadDir,
+            @Value("${app.upload.storage:local}") String storage,
+            @Value("${app.s3.bucket:}") String bucket,
+            ObjectProvider<S3Client> s3Provider) {
         this.imageDir = Paths.get(uploadDir, "images").toAbsolutePath().normalize();
+        this.useS3 = "s3".equalsIgnoreCase(storage);
+        this.bucket = bucket;
+        this.s3 = s3Provider.getIfAvailable();
+        if (useS3) {
+            if (this.s3 == null || bucket == null || bucket.isBlank()) {
+                throw new IllegalStateException(
+                        "app.upload.storage=s3 이지만 S3Client 또는 app.s3.bucket 설정이 없습니다.");
+            }
+            log.info("이미지 저장소: S3 (bucket={})", bucket);
+        } else {
+            log.info("이미지 저장소: 로컬 디스크 ({})", imageDir);
+        }
     }
 
     /**
@@ -61,13 +94,23 @@ public class UploadService {
 
         String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;
         try {
-            Files.createDirectories(imageDir);
-            Path target = imageDir.resolve(filename).normalize();
-            // createDirectories/resolve 조합의 비정상 경로 방어
-            if (!target.startsWith(imageDir)) {
-                throw new IllegalArgumentException("잘못된 파일 경로입니다.");
+            if (useS3) {
+                s3.putObject(
+                        PutObjectRequest.builder()
+                                .bucket(bucket)
+                                .key(S3_PREFIX + filename)
+                                .contentType(file.getContentType())
+                                .build(),
+                        RequestBody.fromBytes(file.getBytes()));
+            } else {
+                Files.createDirectories(imageDir);
+                Path target = imageDir.resolve(filename).normalize();
+                // createDirectories/resolve 조합의 비정상 경로 방어
+                if (!target.startsWith(imageDir)) {
+                    throw new IllegalArgumentException("잘못된 파일 경로입니다.");
+                }
+                file.transferTo(target);
             }
-            file.transferTo(target);
         } catch (IOException e) {
             log.error("이미지 저장 실패: {}", e.getMessage(), e);
             throw new UncheckedIOException("이미지 저장에 실패했습니다.", e);
@@ -77,15 +120,27 @@ public class UploadService {
 
     /** 저장된 이미지 바이트를 읽어온다. 경로 조작(../ 등)은 거부한다. */
     public byte[] read(String filename) {
-        Path path = resolveSafe(filename);
-        if (!Files.exists(path) || !Files.isReadable(path)) {
+        validateFilename(filename);
+        if (useS3) {
+            try {
+                ResponseBytes<GetObjectResponse> obj = s3.getObjectAsBytes(
+                        GetObjectRequest.builder()
+                                .bucket(bucket)
+                                .key(S3_PREFIX + filename)
+                                .build());
+                return obj.asByteArray();
+            } catch (NoSuchKeyException e) {
+                // S3에 없으면 예전 로컬 저장분을 fallback으로 읽어준다(전환 전 업로드된 이미지 호환).
+                if (localReadable(filename)) {
+                    return readLocal(filename);
+                }
+                throw new IllegalArgumentException("이미지를 찾을 수 없습니다.");
+            }
+        }
+        if (!localReadable(filename)) {
             throw new IllegalArgumentException("이미지를 찾을 수 없습니다.");
         }
-        try {
-            return Files.readAllBytes(path);
-        } catch (IOException e) {
-            throw new UncheckedIOException("이미지를 읽을 수 없습니다.", e);
-        }
+        return readLocal(filename);
     }
 
     /** 파일명으로 content-type을 추론한다(서빙용). 알 수 없으면 octet-stream. */
@@ -101,11 +156,30 @@ public class UploadService {
         };
     }
 
-    /** 파일명을 검증하고 이미지 디렉토리 내부 경로로만 해석한다(경로 탈출 방지). */
-    private Path resolveSafe(String filename) {
+    // ---------- 로컬 디스크 입출력 ----------
+
+    private boolean localReadable(String filename) {
+        Path path = resolveSafe(filename);
+        return Files.exists(path) && Files.isReadable(path);
+    }
+
+    private byte[] readLocal(String filename) {
+        try {
+            return Files.readAllBytes(resolveSafe(filename));
+        } catch (IOException e) {
+            throw new UncheckedIOException("이미지를 읽을 수 없습니다.", e);
+        }
+    }
+
+    private void validateFilename(String filename) {
         if (filename == null || !filename.matches("[A-Za-z0-9._-]+")) {
             throw new IllegalArgumentException("잘못된 파일명입니다.");
         }
+    }
+
+    /** 파일명을 검증하고 이미지 디렉토리 내부 경로로만 해석한다(경로 탈출 방지). */
+    private Path resolveSafe(String filename) {
+        validateFilename(filename);
         Path path = imageDir.resolve(filename).normalize();
         if (!path.startsWith(imageDir)) {
             throw new IllegalArgumentException("잘못된 파일 경로입니다.");

@@ -44,6 +44,20 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+# 이미지 저장소 설정. storage=local(기본)이면 로컬 디스크, s3이면 AWS S3를 사용한다.
+# 서빙 경로(GET /api/v1/uploads/images/{파일명})는 두 경우 모두 동일하다.
+app:
+  upload:
+    storage: ${UPLOAD_STORAGE:local}   # local | s3
+    dir: ${UPLOAD_DIR:uploads}         # local 모드일 때 저장 경로
+  s3:
+    bucket: ${AWS_S3_BUCKET:}
+    region: ${AWS_S3_REGION:ap-northeast-2}
+    # 운영에서는 IAM 역할 권장(키 비워두면 기본 자격증명 체인 사용).
+    # 로컬 개발에서만 application-local.yml 또는 환경변수로 키 주입.
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
+
 ---
 spring:
   config:

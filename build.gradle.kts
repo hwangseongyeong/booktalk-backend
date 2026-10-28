@@ -40,6 +40,10 @@ dependencies {
 	// Swagger / OpenAPI
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 
+	// AWS S3 (이미지 저장소)
+	implementation(platform("software.amazon.awssdk:bom:2.28.29"))
+	implementation("software.amazon.awssdk:s3")
+
 	// Lombok
 	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
