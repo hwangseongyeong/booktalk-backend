@@ -78,6 +78,14 @@ services:
       S3_BUCKET: ${S3_BUCKET:-}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
 
+      # 사용자 업로드 이미지(프로필/모임/기록 사진) 저장소. 책등(STORAGE_MODE)과는 별개 버킷.
+      # local(기본) | s3. 자격증명은 비우면 EC2 IAM Role(기본 자격증명 체인) 사용.
+      UPLOAD_STORAGE: ${UPLOAD_STORAGE:-local}
+      AWS_S3_REGION: ${AWS_S3_REGION:-ap-northeast-2}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+
       # 책등 일괄 재생성 관리자 엔드포인트 토큰. 비워두면 해당 API는 항상 403(비활성).
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
 
