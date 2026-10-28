@@ -41,7 +41,9 @@ public class UploadController {
         byte[] bytes = uploadService.read(relKey);
         return ResponseEntity.ok()
                 .contentType(uploadService.contentTypeOf(relKey))
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic())
+                // 파일명이 UUID라 한 URL의 내용은 바뀌지 않는다. immutable로 브라우저 재검증까지 생략시켜
+                // 클라이언트 캐시를 최대한 활용(→ 재요청/S3 다운로드 최소화).
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
                 .body(bytes);
     }
 }
