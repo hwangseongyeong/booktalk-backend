@@ -21,4 +21,6 @@ public interface ReadingRecordRepository extends JpaRepository<ReadingRecord, Lo
 
     // 어드민 지표
     long countByStatus(ReadingRecord.ReadingStatus status);
+
+    long countByUser(User user);
 }

@@ -8,4 +8,6 @@ import java.util.List;
 public interface BookNoteRepository extends JpaRepository<BookNote, Long> {
 
     List<BookNote> findByUserOrderByIdDesc(User user);
+
+    long countByUser(User user);
 }

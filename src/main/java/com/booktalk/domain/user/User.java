@@ -38,6 +38,10 @@ public class User {
 	@Column(nullable = false, length = 20)
 	private UserRole role = UserRole.USER;
 
+	// 정지 여부. 운영자가 정지하면 로그인/토큰 발급이 차단된다(soft, 복구 가능).
+	@Column(nullable = false)
+	private boolean suspended = false;
+
 	@Column(nullable = false)
 	private String oauthProvider; // KAKAO, NAVER, GOOGLE, FACEBOOK
 
@@ -126,5 +130,17 @@ public class User {
 
 	public void revokeAdmin() {
 		this.role = UserRole.USER;
+	}
+
+	public boolean isSuspended() {
+		return this.suspended;
+	}
+
+	public void suspend() {
+		this.suspended = true;
+	}
+
+	public void unsuspend() {
+		this.suspended = false;
 	}
 }
