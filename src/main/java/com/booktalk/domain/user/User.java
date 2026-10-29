@@ -54,6 +54,19 @@ public class User {
 	}
 
 	/**
+	 * 프로필 이미지 URL을 외부에 노출할 때 http를 https로 승격한다.
+	 * 카카오 등이 http URL로 주는데, https 페이지/앱 WebView의 mixed content 차단과
+	 * iOS ATS 차단으로 이미지가 안 보이기 때문. (카카오 CDN은 https 지원, 업로드 https/CDN URL은 그대로)
+	 * 내부 로직은 필드(this.profileImageUrl)를 직접 쓰므로 이 getter 정규화의 영향을 받지 않는다.
+	 */
+	public String getProfileImageUrl() {
+		if (profileImageUrl != null && profileImageUrl.startsWith("http://")) {
+			return "https://" + profileImageUrl.substring("http://".length());
+		}
+		return profileImageUrl;
+	}
+
+	/**
 	 * 소셜 제공자 쪽 최신 프로필로 갱신한다.
 	 * 온보딩을 마친 사용자는 본인이 정한 닉네임/프로필을 유지해야 하므로 호출 전에 분기한다(AuthService).
 	 */
