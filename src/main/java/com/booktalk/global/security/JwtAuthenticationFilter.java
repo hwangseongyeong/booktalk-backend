@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -30,8 +31,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null) {
             try {
-                Long userId = jwtTokenProvider.parseUserIdFromAccessToken(token);
-                var authentication = new UsernamePasswordAuthenticationToken(userId, null, List.of());
+                var payload = jwtTokenProvider.parseAccessToken(token);
+                var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + payload.role()));
+                var authentication = new UsernamePasswordAuthenticationToken(payload.userId(), null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (InvalidTokenException e) {
                 // 토큰이 잘못됐으면 인증 없이 통과시키고, 인가 단계에서 401로 처리되게 둔다.

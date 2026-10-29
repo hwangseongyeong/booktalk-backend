@@ -56,7 +56,8 @@ public class AuthService {
     }
 
     private TokenResponse issueTokens(User user) {
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId());
+        // Access 토큰에 role을 담아 어드민 가드의 근거로 쓴다. 역할 변경은 다음 로그인/리프레시 때 반영된다.
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
         return new TokenResponse(accessToken, refreshToken, UserProfileResponse.from(user));
     }

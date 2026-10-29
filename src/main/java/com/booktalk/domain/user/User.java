@@ -33,6 +33,11 @@ public class User {
 	@Column(nullable = false)
 	private boolean onboardingCompleted;
 
+	// 역할(일반/운영자). 어드민 API 접근 권한의 기준. 기본값 USER.
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private UserRole role = UserRole.USER;
+
 	@Column(nullable = false)
 	private String oauthProvider; // KAKAO, NAVER, GOOGLE, FACEBOOK
 
@@ -107,5 +112,19 @@ public class User {
 
 	public void completeOnboarding() {
 		this.onboardingCompleted = true;
+	}
+
+	// ---------- 역할(어드민) ----------
+
+	public boolean isAdmin() {
+		return this.role == UserRole.ADMIN;
+	}
+
+	public void grantAdmin() {
+		this.role = UserRole.ADMIN;
+	}
+
+	public void revokeAdmin() {
+		this.role = UserRole.USER;
 	}
 }

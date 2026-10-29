@@ -61,6 +61,11 @@ app:
     access-key: ${AWS_ACCESS_KEY_ID:}
     secret-key: ${AWS_SECRET_ACCESS_KEY:}
 
+# 어드민(운영자) 설정.
+admin:
+  # 어드민 웹/어드민 API 권한을 줄 운영자 이메일(쉼표 구분). 앱 시작 시 해당 User를 ADMIN으로 승격.
+  bootstrap-emails: ${ADMIN_BOOTSTRAP_EMAILS:}
+
 ---
 spring:
   config:
