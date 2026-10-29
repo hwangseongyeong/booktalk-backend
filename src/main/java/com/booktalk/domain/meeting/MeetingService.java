@@ -177,8 +177,12 @@ public class MeetingService {
 		User me = currentUserResolver.getCurrentUser();
 		Meeting meeting = getMeetingOrThrow(id);
 
+		// 호스트가 나가면 모임을 종료한다(별도 '모임 종료' 없이 '나가기'로 통합).
 		if (meeting.isHostedBy(me)) {
-			throw new IllegalStateException("모임 생성자는 모임을 나갈 수 없습니다. 모임을 종료해주세요.");
+			if (meeting.getStatus() != Meeting.MeetingStatus.CLOSED) {
+				meeting.close();
+			}
+			return;
 		}
 
 		MeetingMember member = meetingMemberRepository.findByMeetingAndUser(meeting, me)
