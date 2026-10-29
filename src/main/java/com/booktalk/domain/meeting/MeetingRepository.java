@@ -12,4 +12,7 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 	List<Meeting> findByVisibilityAndStatusOrderByIdDesc(Meeting.Visibility visibility, Meeting.MeetingStatus status);
 
 	Optional<Meeting> findByInviteToken(String inviteToken);
+
+	// 어드민 지표
+	long countByStatus(Meeting.MeetingStatus status);
 }
