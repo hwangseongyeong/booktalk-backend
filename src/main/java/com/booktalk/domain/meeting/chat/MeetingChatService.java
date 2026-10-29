@@ -47,8 +47,8 @@ public class MeetingChatService {
 		Meeting meeting = getParticipatingMeeting(meetingId, me);
 
 		List<MeetingChatMessage> messages = (afterId != null)
-				? chatRepository.findByMeetingAndIdGreaterThanOrderByIdAsc(meeting, afterId)
-				: chatRepository.findByMeetingOrderByIdAsc(meeting);
+				? chatRepository.findByMeetingAndIdGreaterThanAndDeletedFalseOrderByIdAsc(meeting, afterId)
+				: chatRepository.findByMeetingAndDeletedFalseOrderByIdAsc(meeting);
 
 		Map<Long, List<MeetingChatReaction>> reactionsByMessage = loadReactions(messages);
 

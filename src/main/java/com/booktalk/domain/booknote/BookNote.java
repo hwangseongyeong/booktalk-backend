@@ -44,6 +44,10 @@ public class BookNote {
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 
+	// 모더레이션 soft-delete. true면 사용자 피드에서 숨긴다(복구 가능).
+	@Column(nullable = false)
+	private boolean deleted = false;
+
 	@Builder
 	public BookNote(User user, Book book, String imageUrl, String content) {
 		this.user = user;
@@ -51,5 +55,13 @@ public class BookNote {
 		this.imageUrl = imageUrl;
 		this.content = content;
 		this.createdAt = LocalDateTime.now();
+	}
+
+	public boolean isDeleted() {
+		return this.deleted;
+	}
+
+	public void softDelete() {
+		this.deleted = true;
 	}
 }

@@ -37,11 +37,23 @@ public class MeetingChatMessage {
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 
+	// 모더레이션 soft-delete. true면 대화방 조회에서 숨긴다(복구 가능).
+	@Column(nullable = false)
+	private boolean deleted = false;
+
 	@Builder
 	public MeetingChatMessage(Meeting meeting, User user, String content) {
 		this.meeting = meeting;
 		this.user = user;
 		this.content = content;
 		this.createdAt = LocalDateTime.now();
+	}
+
+	public boolean isDeleted() {
+		return this.deleted;
+	}
+
+	public void softDelete() {
+		this.deleted = true;
 	}
 }

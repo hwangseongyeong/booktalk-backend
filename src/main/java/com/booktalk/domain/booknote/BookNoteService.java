@@ -51,7 +51,7 @@ public class BookNoteService {
 
     public List<BookNoteResponse> getMyNotes() {
         User user = currentUserResolver.getCurrentUser();
-        return bookNoteRepository.findByUserOrderByIdDesc(user).stream()
+        return bookNoteRepository.findByUserAndDeletedFalseOrderByIdDesc(user).stream()
                 .map(BookNoteResponse::from)
                 .toList();
     }
