@@ -20,7 +20,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -112,16 +111,16 @@ public class UploadService {
         String relKey = dateDir + "/" + filename;
         try {
             if (useS3) {
-                byte[] data = file.getBytes();
                 s3.putObject(
                         PutObjectRequest.builder()
                                 .bucket(bucket)
                                 .key(S3_PREFIX + relKey)
                                 .contentType(file.getContentType())
+                                // 파일명이 UUID라 내용 불변 → S3 객체에 장기 immutable 캐시 헤더를 심는다.
+                                // CloudFront가 이 헤더를 뷰어로 전달해 클라이언트 로컬 캐시가 적용된다.
+                                .cacheControl("public, max-age=31536000, immutable")
                                 .build(),
-                        RequestBody.fromBytes(data));
-                // 로컬 캐시에도 바로 기록(write-through) → 이후 조회는 S3 재다운로드 없이 로컬에서 서빙
-                writeLocalCache(relKey, data);
+                        RequestBody.fromBytes(file.getBytes()));
             } else {
                 Path target = imageDir.resolve(relKey).normalize();
                 // resolve 조합의 비정상 경로 방어
@@ -144,17 +143,12 @@ public class UploadService {
     }
 
     /**
-     * 저장된 이미지 바이트를 읽어온다. 경로 조작(../ 등)은 거부한다.
-     * 로컬 디스크를 S3 앞단 읽기 캐시로 사용한다: 로컬에 있으면 로컬에서 바로 서빙(S3 호출 0),
-     * 없을 때만 S3에서 받아 로컬에 캐싱한 뒤 반환한다(다음 조회부터는 로컬 히트 → S3 다운로드 절감).
+     * 저장된 이미지 바이트를 읽어온다(백엔드 프록시 경로용). 경로 조작(../ 등)은 거부한다.
+     * S3 모드에서는 S3에서 직접 읽는다(로컬 캐시 없음). 정적 서빙은 CloudFront가 담당하며,
+     * 이 경로는 공개 베이스 URL 미설정 시의 폴백 용도다. 로컬 저장 모드에서는 로컬 디스크에서 읽는다.
      */
     public byte[] read(String key) {
         validateFilename(key);
-        // 1) 로컬 캐시 우선 (S3 다운로드 회피). 전환 전 로컬 저장분도 여기서 바로 처리된다.
-        if (localReadable(key)) {
-            return readLocal(key);
-        }
-        // 2) 로컬에 없으면 S3에서 받아 캐시에 저장 후 반환.
         if (useS3) {
             try {
                 ResponseBytes<GetObjectResponse> obj = s3.getObjectAsBytes(
@@ -162,14 +156,15 @@ public class UploadService {
                                 .bucket(bucket)
                                 .key(S3_PREFIX + key)
                                 .build());
-                byte[] data = obj.asByteArray();
-                writeLocalCache(key, data);
-                return data;
+                return obj.asByteArray();
             } catch (NoSuchKeyException e) {
                 throw new IllegalArgumentException("이미지를 찾을 수 없습니다.");
             }
         }
-        throw new IllegalArgumentException("이미지를 찾을 수 없습니다.");
+        if (!localReadable(key)) {
+            throw new IllegalArgumentException("이미지를 찾을 수 없습니다.");
+        }
+        return readLocal(key);
     }
 
     /** 파일명으로 content-type을 추론한다(서빙용). 알 수 없으면 octet-stream. */
@@ -197,30 +192,6 @@ public class UploadService {
             return Files.readAllBytes(resolveSafe(filename));
         } catch (IOException e) {
             throw new UncheckedIOException("이미지를 읽을 수 없습니다.", e);
-        }
-    }
-
-    /**
-     * 바이트를 로컬 캐시에 기록한다(S3 조회 절감용). 임시파일에 쓴 뒤 원자적으로 교체해
-     * 동시 요청 시 부분 파일이 읽히지 않게 한다. 캐시 실패는 치명적이지 않으므로 경고만 남긴다.
-     */
-    private void writeLocalCache(String relKey, byte[] data) {
-        try {
-            Path target = resolveSafe(relKey);
-            Files.createDirectories(target.getParent());
-            Path tmp = Files.createTempFile(target.getParent(), ".tmp-", null);
-            try {
-                Files.write(tmp, data);
-                try {
-                    Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-                } catch (IOException atomicUnsupported) {
-                    Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-                }
-            } finally {
-                Files.deleteIfExists(tmp);
-            }
-        } catch (IOException e) {
-            log.warn("로컬 캐시 기록 실패({}): {}", relKey, e.getMessage());
         }
     }
 
