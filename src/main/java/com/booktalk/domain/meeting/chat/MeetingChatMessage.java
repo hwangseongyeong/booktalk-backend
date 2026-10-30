@@ -31,8 +31,21 @@ public class MeetingChatMessage {
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
-	@Column(nullable = false, length = 1000)
+	// 첨부만 있는 메시지(사진/파일)를 허용하므로 nullable. 본문·첨부 중 하나는 있어야 함(검증은 서비스).
+	@Column(length = 1000)
 	private String content;
+
+	// ----- 첨부(사진/파일) -----
+	@Column(length = 512)
+	private String attachmentUrl;
+
+	@Column(length = 16)
+	private String attachmentType; // IMAGE | FILE
+
+	@Column(length = 255)
+	private String attachmentName; // 원본 파일명
+
+	private Long attachmentSize; // bytes
 
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
@@ -42,10 +55,15 @@ public class MeetingChatMessage {
 	private boolean deleted = false;
 
 	@Builder
-	public MeetingChatMessage(Meeting meeting, User user, String content) {
+	public MeetingChatMessage(Meeting meeting, User user, String content,
+			String attachmentUrl, String attachmentType, String attachmentName, Long attachmentSize) {
 		this.meeting = meeting;
 		this.user = user;
 		this.content = content;
+		this.attachmentUrl = attachmentUrl;
+		this.attachmentType = attachmentType;
+		this.attachmentName = attachmentName;
+		this.attachmentSize = attachmentSize;
 		this.createdAt = LocalDateTime.now();
 	}
 

@@ -20,6 +20,10 @@ public record MeetingChatMessageResponse(
 		String senderProfileImageUrl,
 		String senderProfileColor,
 		String content,
+		String attachmentUrl,
+		String attachmentType,
+		String attachmentName,
+		Long attachmentSize,
 		LocalDateTime createdAt,
 		boolean mine,
 		List<ReactionSummary> reactions
@@ -59,6 +63,10 @@ public record MeetingChatMessageResponse(
 				sender.getProfileImageUrl(),
 				sender.getProfileColor(),
 				message.getContent(),
+				message.getAttachmentUrl(),
+				message.getAttachmentType(),
+				message.getAttachmentName(),
+				message.getAttachmentSize(),
 				message.getCreatedAt(),
 				sender.getId().equals(currentUserId),
 				ReactionSummary.summarize(reactions, currentUserId)

@@ -64,16 +64,34 @@ public class MeetingChatService {
 		User me = currentUserResolver.getCurrentUser();
 		Meeting meeting = getParticipatingMeeting(meetingId, me);
 
-		String content = request.content() != null ? request.content().strip() : "";
-		if (content.isEmpty()) {
+		String content = request.content() != null ? request.content().strip() : null;
+		boolean hasContent = content != null && !content.isEmpty();
+
+		String attachmentUrl = trimToNull(request.attachmentUrl());
+		boolean hasAttachment = attachmentUrl != null;
+		// javascript: 같은 위험 스킴을 막고, 우리 업로드가 돌려준 경로/URL 형태만 허용한다.
+		if (hasAttachment && !attachmentUrl.matches("(/|https?://).+")) {
+			throw new IllegalArgumentException("첨부 URL이 올바르지 않습니다.");
+		}
+
+		if (!hasContent && !hasAttachment) {
 			throw new IllegalArgumentException("메시지를 입력해주세요.");
 		}
+
+		// 첨부 유형은 IMAGE/FILE만. 미지정이거나 알 수 없는 값이면 FILE로 간주.
+		String attachmentType = hasAttachment
+				? ("IMAGE".equalsIgnoreCase(request.attachmentType()) ? "IMAGE" : "FILE")
+				: null;
 
 		MeetingChatMessage saved = chatRepository.save(
 				MeetingChatMessage.builder()
 						.meeting(meeting)
 						.user(me)
-						.content(content)
+						.content(hasContent ? content : null)
+						.attachmentUrl(attachmentUrl)
+						.attachmentType(attachmentType)
+						.attachmentName(hasAttachment ? trimToNull(request.attachmentName()) : null)
+						.attachmentSize(hasAttachment ? request.attachmentSize() : null)
 						.build());
 
 		// 새 메시지에는 아직 리액션이 없다.
@@ -154,6 +172,15 @@ public class MeetingChatService {
 		}
 		return reactionRepository.findByMessageIn(messages).stream()
 				.collect(Collectors.groupingBy(r -> r.getMessage().getId()));
+	}
+
+	/** 공백만 있거나 빈 문자열이면 null, 아니면 trim한 값. */
+	private static String trimToNull(String s) {
+		if (s == null) {
+			return null;
+		}
+		String t = s.strip();
+		return t.isEmpty() ? null : t;
 	}
 
 	/** 참여 중인 모임만 반환. host도 생성 시 멤버로 등록되므로 멤버십 검사로 충분하다. */
