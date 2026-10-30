@@ -171,7 +171,7 @@ aws ecr create-repository --repository-name booktalk-backend --region ap-northea
 | `AWS_ACCESS_KEY_ID` | 위에서 발급한 IAM 사용자 액세스 키 |
 | `AWS_SECRET_ACCESS_KEY` | 위 액세스 키의 시크릿 |
 | `AWS_REGION` | `ap-northeast-2` |
-| `EC2_HOST` | EC2 Elastic IP 또는 `api.booktalk.io.kr` |
+| `EC2_HOST` | EC2 Elastic IP 또는 `api.text42.app` |
 | `EC2_SSH_USER` | `ubuntu` (AMI에 따라 다름) |
 | `EC2_SSH_KEY` | EC2 접속용 `.pem` 파일 내용 전체 (`cat your-key.pem` 결과 그대로 붙여넣기) |
 

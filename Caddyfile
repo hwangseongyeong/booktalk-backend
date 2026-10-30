@@ -1,6 +1,6 @@
 # Caddy가 이 도메인으로 들어오는 요청에 자동으로 Let's Encrypt HTTPS 인증서를 발급/갱신한다.
 
-api.booktalk.io.kr {
+api.text42.app {
 	reverse_proxy app:8080
 }
 
