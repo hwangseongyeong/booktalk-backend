@@ -1,6 +1,8 @@
 # Caddy가 이 도메인으로 들어오는 요청에 자동으로 Let's Encrypt HTTPS 인증서를 발급/갱신한다.
 
-api.text42.app {
+# 전환기 동안 신규(api.text42.app)·구(api.booktalk.io.kr) 도메인을 함께 받는다.
+# 이미 배포된 모바일 앱이 구 도메인을 호출해도 동작하도록 유지. 전환 완료 후 구 도메인은 제거.
+api.text42.app, api.booktalk.io.kr {
 	reverse_proxy app:8080
 }
 
