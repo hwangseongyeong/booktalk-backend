@@ -56,6 +56,14 @@ public class BookNoteService {
                 .toList();
     }
 
+    /** 혼자 기록 단건 조회. 본인 소유 + 삭제되지 않은 기록만. */
+    public BookNoteResponse getMyNote(Long id) {
+        User user = currentUserResolver.getCurrentUser();
+        BookNote note = bookNoteRepository.findByIdAndUserAndDeletedFalse(id, user)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 기록입니다. id=" + id));
+        return BookNoteResponse.from(note);
+    }
+
     @Transactional
     public void delete(Long id) {
         User user = currentUserResolver.getCurrentUser();

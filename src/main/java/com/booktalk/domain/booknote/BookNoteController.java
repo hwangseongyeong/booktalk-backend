@@ -36,6 +36,12 @@ public class BookNoteController {
         return ApiResponse.success(bookNoteService.getMyNotes());
     }
 
+    /** 혼자 기록 단건 조회(본인 것만) */
+    @GetMapping("/{id}")
+    public ApiResponse<BookNoteResponse> getNote(@PathVariable Long id) {
+        return ApiResponse.success(bookNoteService.getMyNote(id));
+    }
+
     /** 혼자 기록 삭제 */
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
